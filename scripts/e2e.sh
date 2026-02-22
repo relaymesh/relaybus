@@ -84,5 +84,5 @@ run_pair "py-kafka" \
   "TOPIC=relaybus.e2e.py.kafka ${PYTHON_BIN} e2e/python/kafka_e2e.py pub"
 
 run_pair "py-http" \
-  "TOPIC=relaybus.e2e.py.http HTTP_PORT=8090 ${PYTHON_BIN} e2e/python/http.py sub" \
-  "TOPIC=relaybus.e2e.py.http HTTP_ENDPOINT=http://localhost:8090/{topic} ${PYTHON_BIN} e2e/python/http.py pub"
+  "TOPIC=relaybus.e2e.py.http HTTP_PORT=8090 ${PYTHON_BIN} e2e/python/http_e2e.py sub" \
+  "TOPIC=relaybus.e2e.py.http HTTP_ENDPOINT=http://localhost:8090/{topic} ${PYTHON_BIN} e2e/python/http_e2e.py pub"
