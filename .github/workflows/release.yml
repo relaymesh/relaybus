@@ -26,10 +26,13 @@ jobs:
       - name: TypeScript test
         run: npm test
       - name: Publish NPM packages
-        if: ${{ secrets.NPM_TOKEN != '' }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "NPM_TOKEN not set; skipping npm publish."
+            exit 0
+          fi
           npm publish --workspace sdk/core/typescript --access public
           npm publish --workspace sdk/amqp/typescript --access public
           npm publish --workspace sdk/http/typescript --access public
@@ -46,11 +49,14 @@ jobs:
       - name: Python test
         run: pytest
       - name: Publish PyPI packages
-        if: ${{ secrets.PYPI_API_TOKEN != '' }}
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
+          if [ -z "${TWINE_PASSWORD:-}" ]; then
+            echo "PYPI_API_TOKEN not set; skipping PyPI publish."
+            exit 0
+          fi
           python -m build sdk/core/python
           python -m build sdk/amqp/python
           python -m build sdk/http/python
