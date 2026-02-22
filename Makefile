@@ -11,7 +11,7 @@ test-go:
 	go test ./...
 
 test-ts:
-	npm test
+	pnpm test
 
 test-py:
 	pytest
