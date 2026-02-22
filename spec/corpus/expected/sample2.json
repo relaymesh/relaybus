@@ -1,0 +1,9 @@
+{
+  "v": "v1",
+  "id": "msg-002",
+  "topic": "beta",
+  "ts": "2024-01-02T00:00:00.123456789Z",
+  "content_type": "application/octet-stream",
+  "meta": {},
+  "payload_bytes_b64": ""
+}

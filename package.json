@@ -1,0 +1,23 @@
+{
+  "name": "relaybus",
+  "private": true,
+  "workspaces": [
+    "sdk/core/typescript",
+    "sdk/amqp/typescript",
+    "sdk/http/typescript",
+    "sdk/nats/typescript",
+    "sdk/kafka/typescript"
+  ],
+  "scripts": {
+    "test": "npm run -ws test",
+    "build": "npm run -w sdk/core/typescript build && npm run -w sdk/amqp/typescript build && npm run -w sdk/http/typescript build && npm run -w sdk/nats/typescript build && npm run -w sdk/kafka/typescript build"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "amqplib": "^0.10.4",
+    "kafkajs": "^2.2.4",
+    "nats": "^2.21.0",
+    "typescript": "^5.4.5",
+    "vitest": "^1.5.0"
+  }
+}

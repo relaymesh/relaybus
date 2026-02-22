@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Go test
+        run: go test ./...
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+      - name: Node install
+        run: npm install
+      - name: TypeScript test
+        run: npm test
+      - name: Publish NPM packages
+        if: ${{ secrets.NPM_TOKEN != '' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm publish --workspace sdk/core/typescript --access public
+          npm publish --workspace sdk/amqp/typescript --access public
+          npm publish --workspace sdk/http/typescript --access public
+          npm publish --workspace sdk/nats/typescript --access public
+          npm publish --workspace sdk/kafka/typescript --access public
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Python install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e sdk/core/python -e sdk/amqp/python -e sdk/http/python -e sdk/nats/python -e sdk/kafka/python pytest build twine
+      - name: Python test
+        run: pytest
+      - name: Publish PyPI packages
+        if: ${{ secrets.PYPI_API_TOKEN != '' }}
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          python -m build sdk/core/python
+          python -m build sdk/amqp/python
+          python -m build sdk/http/python
+          python -m build sdk/nats/python
+          python -m build sdk/kafka/python
+          python -m twine upload sdk/core/python/dist/* sdk/amqp/python/dist/* sdk/http/python/dist/* sdk/nats/python/dist/* sdk/kafka/python/dist/*

@@ -1,0 +1,11 @@
+{
+  "v": "v1",
+  "id": "msg-003",
+  "topic": "gamma",
+  "ts": "2024-01-03T12:34:56Z",
+  "content_type": "application/octet-stream",
+  "meta": {
+    "kind": "binary"
+  },
+  "payload_bytes_b64": "AAEC/w=="
+}

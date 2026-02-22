@@ -1,0 +1,12 @@
+{
+  "v": "v1",
+  "id": "msg-001",
+  "topic": "alpha",
+  "ts": "2024-01-01T00:00:00Z",
+  "content_type": "text/plain",
+  "meta": {
+    "source": "unit",
+    "trace": "t1"
+  },
+  "payload_bytes_b64": "aGVsbG8="
+}

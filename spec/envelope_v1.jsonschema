@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://relaybus.dev/spec/envelope_v1.jsonschema",
+  "title": "Relaybus Envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "v",
+    "id",
+    "topic",
+    "ts",
+    "content_type",
+    "payload_b64",
+    "meta"
+  ],
+  "properties": {
+    "v": {
+      "type": "string",
+      "enum": ["v1"]
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "topic": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ts": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "content_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "payload_b64": {
+      "type": "string"
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}

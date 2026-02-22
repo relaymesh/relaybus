@@ -1,0 +1,14 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "declaration": true,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@relaybus/relaybus-core": ["../../core/typescript/dist"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}

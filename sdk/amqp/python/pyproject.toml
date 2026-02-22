@@ -1,0 +1,14 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "relaybus-amqp"
+version = "0.1.0"
+description = "Relaybus AMQP subscriber"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["relaybus-core", "pika>=1.3.2"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["relaybus_amqp"]

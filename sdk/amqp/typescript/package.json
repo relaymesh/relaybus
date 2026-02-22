@@ -1,0 +1,17 @@
+{
+  "name": "@relaybus/relaybus-amqp",
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.5"
+  },
+  "dependencies": {
+    "@relaybus/relaybus-core": "workspace:*",
+    "amqplib": "^0.10.9"
+  }
+}

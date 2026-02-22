@@ -1,0 +1,11 @@
+{
+  "v": "v1",
+  "id": "msg-005",
+  "topic": "epsilon",
+  "ts": "2024-01-05T09:10:11Z",
+  "content_type": "application/octet-stream",
+  "payload_b64": "YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=",
+  "meta": {
+    "size": "128"
+  }
+}

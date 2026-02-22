@@ -1,0 +1,26 @@
+.DS_Store
+*.log
+
+# Go
+*.test
+*.out
+
+# Node/TypeScript
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# IDE
+.idea/
+.vscode/

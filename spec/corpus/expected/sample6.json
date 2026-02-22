@@ -1,0 +1,11 @@
+{
+  "v": "v1",
+  "id": "msg-006",
+  "topic": "zeta",
+  "ts": "2024-01-06T23:59:59Z",
+  "content_type": "application/octet-stream",
+  "meta": {
+    "k": "v"
+  },
+  "payload_bytes_b64": "cGF5bG9hZC02"
+}

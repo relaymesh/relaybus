@@ -1,0 +1,11 @@
+{
+  "v": "v1",
+  "id": "msg-004",
+  "topic": "delta",
+  "ts": "2024-01-04T08:00:00Z",
+  "content_type": "application/json",
+  "payload_b64": "anNvbjp7ImEiOjF9",
+  "meta": {
+    "format": "json"
+  }
+}
