@@ -21,13 +21,16 @@ jobs:
         with:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
+      - uses: pnpm/action-setup@v3
+        with:
+          version: "10.19.0"
       - name: Node install
-        run: npm install
+        run: pnpm install
       - name: TypeScript test
-        run: npm test
+        run: pnpm -r test
       - name: Publish NPM packages
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ vars.NPM_TOKEN }}
         run: |
           if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
             echo "NPM_TOKEN not set; skipping npm publish."
@@ -51,7 +54,7 @@ jobs:
       - name: Publish PyPI packages
         env:
           TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+          TWINE_PASSWORD: ${{ vars.PYPI_API_TOKEN }}
         run: |
           if [ -z "${TWINE_PASSWORD:-}" ]; then
             echo "PYPI_API_TOKEN not set; skipping PyPI publish."

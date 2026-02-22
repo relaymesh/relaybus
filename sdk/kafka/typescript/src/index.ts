@@ -113,17 +113,49 @@ export class KafkaSubscriber {
       throw new Error("consumer is not initialized");
     }
     await this.consumer.subscribe({ topic, fromBeginning: true });
+    const consumer = this.consumer;
+    const max = this.maxMessages ?? 1;
     let count = 0;
-    await this.consumer.run({
-      eachMessage: async ({ message }) => {
-        const value = message.value ? Buffer.from(message.value) : Buffer.from("");
-        await this.handleMessage(value);
-        count++;
-        if (this.maxMessages && count >= this.maxMessages) {
-          await this.consumer!.stop();
-        }
+    let finished = false;
+
+    let finishError: Error | undefined;
+    const finish = async (err?: Error) => {
+      if (finished) {
+        return;
       }
-    });
+      finished = true;
+      if (err) {
+        finishError = err;
+      }
+      try {
+        await consumer.stop();
+      } catch {
+        // Ignore stop failures.
+      }
+      try {
+        await consumer.disconnect();
+      } catch {
+        // Ignore disconnect failures.
+      }
+    };
+
+    try {
+      await consumer.run({
+        eachMessage: async ({ message }) => {
+          const value = message.value ? Buffer.from(message.value) : Buffer.from("");
+          await this.handleMessage(value);
+          count++;
+          if (max > 0 && count >= max) {
+            await finish();
+          }
+        }
+      });
+    } catch (err) {
+      await finish(err as Error);
+    }
+    if (finishError) {
+      throw finishError;
+    }
   }
 
   async close(): Promise<void> {
