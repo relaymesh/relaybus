@@ -1,29 +1,33 @@
 # relaybus
 
-Relaybus is an open-source monorepo for SDKs that publish and consume opaque message envelopes across brokers. This repo is library-first: no CLI and no examples in this iteration.
+Relaybus is a broker-agnostic messaging SDK built around a stable, testable envelope format. It keeps payloads opaque, focuses on predictable behavior, and makes it easy to mix languages within the same event stream.
 
-## What’s included
+## Design principles
 
-- Go: publish + subscribe SDK with adapters for HTTP, AMQP, NATS, Kafka, and memory (publish-only for memory).
-- TypeScript: publish + subscribe utilities for HTTP, AMQP, NATS, and Kafka.
-- Python: publish + subscribe utilities for HTTP, AMQP, NATS, and Kafka.
-- A stable envelope contract under `spec/` plus corpus samples used by all tests.
+- Opaque payloads: the SDK never interprets your bytes, so you own serialization.
+- Stable envelope: versioned JSON with a required base64 payload field.
+- Deterministic testing: shared corpus samples validate every SDK the same way.
+- Library-first: no CLI, no examples folder, and no broker dependencies in unit tests.
 
-## Package names
+## Supported adapters (iteration 1)
 
-TypeScript (npm):
-- `@relaybus/relaybus-core`
-- `@relaybus/relaybus-amqp`
-- `@relaybus/relaybus-nats`
-- `@relaybus/relaybus-kafka`
-- `@relaybus/relaybus-http`
+| Adapter | Go | TypeScript | Python |
+| --- | --- | --- | --- |
+| AMQP | publish + subscribe | publish + subscribe | publish + subscribe |
+| NATS | publish + subscribe | publish + subscribe | publish + subscribe |
+| Kafka | publish + subscribe | publish + subscribe | publish + subscribe |
+| HTTP | publish + subscribe | publish + subscribe | publish + subscribe |
+| Memory | publish only | - | - |
 
-Python (PyPI):
-- `relaybus-core`
-- `relaybus-amqp`
-- `relaybus-nats`
-- `relaybus-kafka`
-- `relaybus-http`
+## Envelope v1 (summary)
+
+Every message is encoded as JSON with a base64 payload:
+
+- Required fields: `v`, `id`, `topic`, `ts`, `content_type`, `payload_b64`, `meta`
+- `content_type` defaults to `application/octet-stream`
+- `meta` is always present (empty object allowed)
+
+The canonical schema and corpus live under `spec/`.
 
 ## Cross-language example (Go publisher → TypeScript subscriber via AMQP)
 
@@ -91,23 +95,22 @@ main().catch((err) => {
 });
 ```
 
-## Testing
+## Packages
 
-- Go: `go test ./...`
-- TypeScript: `npm test`
-- Python: `pytest`
+TypeScript (npm):
+- `@relaybus/relaybus-core`
+- `@relaybus/relaybus-amqp`
+- `@relaybus/relaybus-nats`
+- `@relaybus/relaybus-kafka`
+- `@relaybus/relaybus-http`
 
-## End-to-end
+Python (PyPI):
+- `relaybus-core`
+- `relaybus-amqp`
+- `relaybus-nats`
+- `relaybus-kafka`
+- `relaybus-http`
 
-E2E runs against local brokers from `docker-compose.yaml`.
+## Testing and e2e
 
-```
-docker compose up -d
-make e2e
-```
-
-To stop services:
-
-```
-docker compose down -v
-```
+Unit tests are language-native (`go test`, `npm test`, `pytest`). End-to-end runs use the local `docker-compose.yaml` harness; see `docs/e2e.md` for details.
