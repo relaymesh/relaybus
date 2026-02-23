@@ -1,5 +1,5 @@
 {
-  "name": "@relaybus/relaybus-amqp",
+  "name": "@relaymesh/relaybus-amqp",
   "version": "0.1.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -11,7 +11,7 @@
     "@types/amqplib": "^0.10.5"
   },
   "dependencies": {
-    "@relaybus/relaybus-core": "workspace:*",
+    "@relaymesh/relaybus-core": "workspace:*",
     "amqplib": "^0.10.9"
   }
 }
