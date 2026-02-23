@@ -75,7 +75,7 @@ func main() {
 TypeScript subscriber:
 
 ```ts
-import { AmqpSubscriber } from "@relaybus/relaybus-amqp";
+import { AmqpSubscriber } from "@relaymesh/relaybus-amqp";
 
 async function main() {
   const sub = await AmqpSubscriber.connect({
@@ -98,11 +98,11 @@ main().catch((err) => {
 ## Packages
 
 TypeScript (npm):
-- `@relaybus/relaybus-core`
-- `@relaybus/relaybus-amqp`
-- `@relaybus/relaybus-nats`
-- `@relaybus/relaybus-kafka`
-- `@relaybus/relaybus-http`
+- `@relaymesh/relaybus-core`
+- `@relaymesh/relaybus-amqp`
+- `@relaymesh/relaybus-nats`
+- `@relaymesh/relaybus-kafka`
+- `@relaymesh/relaybus-http`
 
 Python (PyPI):
 - `relaybus-core`
@@ -116,7 +116,7 @@ Python (PyPI):
 npm (public registry):
 
 ```
-npm install @relaybus/relaybus-core @relaybus/relaybus-amqp @relaybus/relaybus-nats @relaybus/relaybus-kafka @relaybus/relaybus-http
+npm install @relaymesh/relaybus-core @relaymesh/relaybus-amqp @relaymesh/relaybus-nats @relaymesh/relaybus-kafka @relaymesh/relaybus-http
 ```
 
 pip (PyPI):
