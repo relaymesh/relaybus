@@ -7,10 +7,10 @@ import (
 	"log"
 	"time"
 
-	"relaybus/sdk/core/go/message"
+	"github.com/relaymesh/relaybus/sdk/core/go/message"
 
-	amqpadapter "relaybus/sdk/amqp/go"
-	core "relaybus/sdk/core/go"
+	amqpadapter "github.com/relaymesh/relaybus/sdk/amqp/go"
+	core "github.com/relaymesh/relaybus/sdk/core/go"
 )
 
 func main() {

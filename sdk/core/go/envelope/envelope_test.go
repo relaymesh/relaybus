@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"relaybus/sdk/core/go/message"
+	"github.com/relaymesh/relaybus/sdk/core/go/message"
 )
 
 func TestEncodeDecodeEnvelope(t *testing.T) {

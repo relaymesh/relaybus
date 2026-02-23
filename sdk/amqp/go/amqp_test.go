@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"relaybus/sdk/core/go/envelope"
-	"relaybus/sdk/core/go/message"
+	"github.com/relaymesh/relaybus/sdk/core/go/envelope"
+	"github.com/relaymesh/relaybus/sdk/core/go/message"
 
-	amqpadapter "relaybus/sdk/amqp/go"
+	amqpadapter "github.com/relaymesh/relaybus/sdk/amqp/go"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )

@@ -7,9 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"relaybus/sdk/core/go/message"
+	"github.com/relaymesh/relaybus/sdk/core/go/message"
 
-	httpadapter "relaybus/sdk/http/go"
+	httpadapter "github.com/relaymesh/relaybus/sdk/http/go"
 )
 
 func TestSubscriberHandlesEnvelope(t *testing.T) {

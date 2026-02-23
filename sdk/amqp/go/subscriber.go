@@ -6,8 +6,8 @@ import (
 
 	amqp "github.com/rabbitmq/amqp091-go"
 
-	"relaybus/sdk/core/go/envelope"
-	"relaybus/sdk/core/go/message"
+	"github.com/relaymesh/relaybus/sdk/core/go/envelope"
+	"github.com/relaymesh/relaybus/sdk/core/go/message"
 )
 
 type SubscriberConfig struct {

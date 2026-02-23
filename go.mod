@@ -1,4 +1,4 @@
-module relaybus
+module github.com/relaymesh/relaybus
 
 go 1.24.0
 

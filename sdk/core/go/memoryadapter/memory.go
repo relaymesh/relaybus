@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"relaybus/sdk/core/go/message"
+	"github.com/relaymesh/relaybus/sdk/core/go/message"
 )
 
 type Config struct {

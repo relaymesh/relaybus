@@ -9,9 +9,9 @@ import (
 	"net/url"
 	"strings"
 
-	"relaybus/sdk/core/go/envelope"
-	"relaybus/sdk/core/go/errdefs"
-	"relaybus/sdk/core/go/message"
+	"github.com/relaymesh/relaybus/sdk/core/go/envelope"
+	"github.com/relaymesh/relaybus/sdk/core/go/errdefs"
+	"github.com/relaymesh/relaybus/sdk/core/go/message"
 )
 
 type Doer interface {

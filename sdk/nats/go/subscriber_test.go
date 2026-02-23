@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	natsadapter "relaybus/sdk/nats/go"
+	natsadapter "github.com/relaymesh/relaybus/sdk/nats/go"
 
 	"github.com/nats-io/nats.go"
 
-	"relaybus/sdk/core/go/message"
+	"github.com/relaymesh/relaybus/sdk/core/go/message"
 )
 
 func TestSubscriberHandlesMsg(t *testing.T) {

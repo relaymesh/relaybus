@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"relaybus/sdk/core/go/envelope"
-	"relaybus/sdk/core/go/message"
+	"github.com/relaymesh/relaybus/sdk/core/go/envelope"
+	"github.com/relaymesh/relaybus/sdk/core/go/message"
 
-	natsadapter "relaybus/sdk/nats/go"
+	natsadapter "github.com/relaymesh/relaybus/sdk/nats/go"
 )
 
 type fakeConn struct {

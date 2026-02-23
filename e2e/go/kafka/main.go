@@ -7,12 +7,12 @@ import (
 	"log"
 	"time"
 
-	core "relaybus/sdk/core/go"
-	kafkaadapter "relaybus/sdk/kafka/go"
+	core "github.com/relaymesh/relaybus/sdk/core/go"
+	kafkaadapter "github.com/relaymesh/relaybus/sdk/kafka/go"
 
 	"github.com/segmentio/kafka-go"
 
-	"relaybus/sdk/core/go/message"
+	"github.com/relaymesh/relaybus/sdk/core/go/message"
 )
 
 func main() {

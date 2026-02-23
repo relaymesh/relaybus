@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"relaybus/sdk/core/go/envelope"
+	"github.com/relaymesh/relaybus/sdk/core/go/envelope"
 )
 
 type fakePublisher struct {

@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	kafkaadapter "relaybus/sdk/kafka/go"
+	kafkaadapter "github.com/relaymesh/relaybus/sdk/kafka/go"
 
 	"github.com/segmentio/kafka-go"
 
-	"relaybus/sdk/core/go/message"
+	"github.com/relaymesh/relaybus/sdk/core/go/message"
 )
 
 func TestSubscriberHandlesMessage(t *testing.T) {

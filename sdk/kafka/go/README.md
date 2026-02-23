@@ -4,7 +4,7 @@ Kafka publisher and subscriber adapters for Relaybus.
 
 ## Install
 
-This module currently declares `module relaybus` in `go.mod`. If you consume it outside this repo, add a replace in your own `go.mod` or adjust the module path in your fork.
+This module declares `module github.com/relaymesh/relaybus` in `go.mod`.
 
 ## Example
 
@@ -16,8 +16,8 @@ import (
 	"log"
 	"time"
 
-	kafkaadapter "relaybus/sdk/kafka/go"
-	"relaybus/sdk/core/go/message"
+	kafkaadapter "github.com/relaymesh/relaybus/sdk/kafka/go"
+	"github.com/relaymesh/relaybus/sdk/core/go/message"
 )
 
 func main() {

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"relaybus/sdk/core/go/errdefs"
-	"relaybus/sdk/core/go/message"
+	"github.com/relaymesh/relaybus/sdk/core/go/errdefs"
+	"github.com/relaymesh/relaybus/sdk/core/go/message"
 )
 
 type envelopeV1 struct {

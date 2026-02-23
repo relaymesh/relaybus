@@ -10,15 +10,15 @@ import (
 	"os"
 	"time"
 
-	"relaybus/sdk/core/go/envelope"
-	"relaybus/sdk/core/go/errdefs"
-	"relaybus/sdk/core/go/memoryadapter"
-	"relaybus/sdk/core/go/message"
+	"github.com/relaymesh/relaybus/sdk/core/go/envelope"
+	"github.com/relaymesh/relaybus/sdk/core/go/errdefs"
+	"github.com/relaymesh/relaybus/sdk/core/go/memoryadapter"
+	"github.com/relaymesh/relaybus/sdk/core/go/message"
 
-	amqpadapter "relaybus/sdk/amqp/go"
-	httpadapter "relaybus/sdk/http/go"
-	kafkaadapter "relaybus/sdk/kafka/go"
-	natsadapter "relaybus/sdk/nats/go"
+	amqpadapter "github.com/relaymesh/relaybus/sdk/amqp/go"
+	httpadapter "github.com/relaymesh/relaybus/sdk/http/go"
+	kafkaadapter "github.com/relaymesh/relaybus/sdk/kafka/go"
+	natsadapter "github.com/relaymesh/relaybus/sdk/nats/go"
 )
 
 const DefaultContentType = "application/octet-stream"

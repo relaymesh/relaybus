@@ -41,8 +41,8 @@ import (
 	"log"
 	"time"
 
-	amqpadapter "github.com/relaybus/relaybus/sdk/amqp/go"
-	"github.com/relaybus/relaybus/sdk/core/go"
+	amqpadapter "github.com/relaymesh/relaybus/sdk/amqp/go"
+	"github.com/relaymesh/relaybus/sdk/core/go"
 )
 
 func main() {
