@@ -1,4 +1,4 @@
-import { decodeEnvelope, encodeEnvelope, DecodedMessage, OutgoingMessage } from "@relaybus/relaybus-core";
+import { decodeEnvelope, encodeEnvelope, DecodedMessage, OutgoingMessage } from "@relaymesh/relaybus-core";
 import { Kafka, Consumer, Producer } from "kafkajs";
 
 export type KafkaProducer = {

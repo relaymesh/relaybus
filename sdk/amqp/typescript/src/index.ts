@@ -1,4 +1,4 @@
-import { decodeEnvelope, encodeEnvelope, DecodedMessage, OutgoingMessage } from "@relaybus/relaybus-core";
+import { decodeEnvelope, encodeEnvelope, DecodedMessage, OutgoingMessage } from "@relaymesh/relaybus-core";
 import { connect, Channel, ChannelModel, ConsumeMessage, ConfirmChannel } from "amqplib";
 
 export type Delivery = {

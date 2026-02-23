@@ -11,7 +11,7 @@ TS_PM ?= pnpm
 TS_INSTALL_CMD ?= $(TS_PM) install
 TS_BUILD_CMD ?= $(TS_PM) -r run build
 TS_TEST_CMD ?= $(TS_PM) -r test
-TS_DEPS_OK_CMD ?= node -e "require.resolve('amqplib');require.resolve('kafkajs');require.resolve('nats');"
+TS_DEPS_OK_CMD ?= node -e "require.resolve('amqplib');require.resolve('kafkajs');require.resolve('nats');require.resolve('@relaymesh/relaybus-core');"
 
 E2E_SCRIPT ?= scripts/e2e.sh
 

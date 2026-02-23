@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { AmqpPublisher } from "../src/index";
-import { decodeEnvelope } from "@relaybus/relaybus-core";
+import { decodeEnvelope } from "@relaymesh/relaybus-core";
 
 type PublishCall = {
   exchange: string;

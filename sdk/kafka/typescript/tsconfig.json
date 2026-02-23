@@ -7,7 +7,7 @@
     "types": ["node"],
     "baseUrl": ".",
     "paths": {
-      "@relaybus/relaybus-core": ["../../core/typescript/dist"]
+      "@relaymesh/relaybus-core": ["../../core/typescript/dist"]
     }
   },
   "include": ["src/**/*.ts"]
