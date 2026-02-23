@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "relaybus-nats"
-version = "0.0.3"
+version = "0.0.4"
 description = "Relaybus NATS publisher and subscriber"
 readme = "README.md"
 requires-python = ">=3.9"
