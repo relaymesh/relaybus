@@ -8,7 +8,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@relaymesh/relaybus-core": "workspace:*",
+    "@relaymesh/relaybus-core": "0.0.4",
     "nats": "^2.29.3"
   }
 }

@@ -11,7 +11,7 @@
     "@types/amqplib": "^0.10.5"
   },
   "dependencies": {
-    "@relaymesh/relaybus-core": "workspace:*",
+    "@relaymesh/relaybus-core": "0.0.4",
     "amqplib": "^0.10.9"
   }
 }
