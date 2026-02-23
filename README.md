@@ -111,6 +111,20 @@ Python (PyPI):
 - `relaybus-kafka`
 - `relaybus-http`
 
+## Install
+
+npm (public registry):
+
+```
+npm install @relaybus/relaybus-core @relaybus/relaybus-amqp @relaybus/relaybus-nats @relaybus/relaybus-kafka @relaybus/relaybus-http
+```
+
+pip (PyPI):
+
+```
+pip install relaybus-core relaybus-amqp relaybus-nats relaybus-kafka relaybus-http
+```
+
 ## Testing and e2e
 
 Unit tests are language-native (`go test`, `npm test`, `pytest`). End-to-end runs use the local `docker-compose.yaml` harness; see `docs/e2e.md` for details.
