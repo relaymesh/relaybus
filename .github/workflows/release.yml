@@ -30,7 +30,7 @@ jobs:
         run: pnpm -r test
       - name: Publish NPM packages
         env:
-          NODE_AUTH_TOKEN: ${{ vars.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
             echo "NPM_TOKEN not set; skipping npm publish."
@@ -54,7 +54,7 @@ jobs:
       - name: Publish PyPI packages
         env:
           TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ vars.PYPI_API_TOKEN }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           if [ -z "${TWINE_PASSWORD:-}" ]; then
             echo "PYPI_API_TOKEN not set; skipping PyPI publish."
