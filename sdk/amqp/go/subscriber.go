@@ -16,6 +16,8 @@ type SubscriberConfig struct {
 	ExchangeType       string
 	RoutingKeyTemplate string
 	Queue              string
+	QueueDurable       bool
+	QueueAutoDelete    bool
 	AutoAck            bool
 	MaxMessages        int
 	Handler            func(ctx context.Context, msg message.Message) error
@@ -28,6 +30,8 @@ type Subscriber struct {
 	exchangeType       string
 	routingKeyTemplate string
 	queue              string
+	queueDurable       bool
+	queueAutoDelete    bool
 	autoAck            bool
 	maxMessages        int
 }
@@ -43,6 +47,8 @@ func NewSubscriber(cfg SubscriberConfig) (*Subscriber, error) {
 		exchangeType:       defaultExchangeType(cfg.ExchangeType),
 		routingKeyTemplate: cfg.RoutingKeyTemplate,
 		queue:              cfg.Queue,
+		queueDurable:       cfg.QueueDurable,
+		queueAutoDelete:    cfg.QueueAutoDelete,
 		autoAck:            cfg.AutoAck,
 		maxMessages:        cfg.MaxMessages,
 	}, nil
@@ -85,7 +91,7 @@ func (s *Subscriber) Start(ctx context.Context, topic string) error {
 			return err
 		}
 	}
-	q, err := ch.QueueDeclare(queueName, false, true, false, false, nil)
+	q, err := ch.QueueDeclare(queueName, s.queueDurable, s.queueAutoDelete, false, false, nil)
 	if err != nil {
 		return err
 	}

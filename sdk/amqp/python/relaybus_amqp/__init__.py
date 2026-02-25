@@ -25,6 +25,8 @@ class AmqpSubscriberConnectConfig:
     exchange_type: str = "topic"
     routing_key_template: str = "{topic}"
     queue: Optional[str] = None
+    queue_durable: bool = False
+    queue_auto_delete: bool = False
 
 
 @dataclass
@@ -34,6 +36,8 @@ class AmqpPublisherConfig:
     routing_key_template: str = "{topic}"
     exchange_type: str = "topic"
     queue: Optional[str] = None
+    queue_durable: bool = False
+    queue_auto_delete: bool = False
 
 
 @dataclass
@@ -43,6 +47,8 @@ class AmqpPublisherConnectConfig:
     routing_key_template: str = "{topic}"
     exchange_type: str = "topic"
     queue: Optional[str] = None
+    queue_durable: bool = False
+    queue_auto_delete: bool = False
 
 
 class AmqpSubscriber:
@@ -54,6 +60,8 @@ class AmqpSubscriber:
         self._exchange_type = "topic"
         self._routing_key_template = "{topic}"
         self._queue = None
+        self._queue_durable = False
+        self._queue_auto_delete = False
 
     @classmethod
     def connect(cls, config: AmqpSubscriberConnectConfig) -> "AmqpSubscriber":
@@ -65,6 +73,8 @@ class AmqpSubscriber:
         subscriber._exchange_type = config.exchange_type
         subscriber._routing_key_template = config.routing_key_template
         subscriber._queue = config.queue
+        subscriber._queue_durable = config.queue_durable
+        subscriber._queue_auto_delete = config.queue_auto_delete
         return subscriber
 
     def handle_delivery(self, delivery: Delivery) -> None:
@@ -82,7 +92,11 @@ class AmqpSubscriber:
                 auto_delete=False,
             )
         queue_name = self._queue or topic
-        self._channel.queue_declare(queue=queue_name, durable=False, auto_delete=True)
+        self._channel.queue_declare(
+            queue=queue_name,
+            durable=self._queue_durable,
+            auto_delete=self._queue_auto_delete,
+        )
         if self._exchange:
             routing_key = _build_routing_key(self._routing_key_template, topic)
             self._channel.queue_bind(queue=queue_name, exchange=self._exchange, routing_key=routing_key)
@@ -119,8 +133,11 @@ class AmqpPublisher:
         self._routing_key_template = config.routing_key_template
         self._exchange_type = config.exchange_type
         self._queue = config.queue
+        self._queue_durable = config.queue_durable
+        self._queue_auto_delete = config.queue_auto_delete
         self._ensured_exchanges: set[str] = set()
         self._ensured_queues: set[str] = set()
+        self._ensured_bindings: set[str] = set()
         self._connection = None
 
     @classmethod
@@ -133,6 +150,8 @@ class AmqpPublisher:
                 routing_key_template=config.routing_key_template,
                 exchange_type=config.exchange_type,
                 queue=config.queue,
+                queue_durable=config.queue_durable,
+                queue_auto_delete=config.queue_auto_delete,
             )
         )
         publisher._connection = connection
@@ -186,8 +205,21 @@ class AmqpPublisher:
         if queue_name and queue_name not in self._ensured_queues:
             declare_queue = getattr(self._channel, "queue_declare", None)
             if callable(declare_queue):
-                declare_queue(queue=queue_name, durable=False, auto_delete=True)
+                declare_queue(
+                    queue=queue_name,
+                    durable=self._queue_durable,
+                    auto_delete=self._queue_auto_delete,
+                )
             self._ensured_queues.add(queue_name)
+
+        if self._exchange and queue_name:
+            bind_queue = getattr(self._channel, "queue_bind", None)
+            if callable(bind_queue):
+                routing_key = _build_routing_key(self._routing_key_template, topic)
+                token = f"{queue_name}|{self._exchange}|{routing_key}"
+                if token not in self._ensured_bindings:
+                    bind_queue(queue=queue_name, exchange=self._exchange, routing_key=routing_key)
+                    self._ensured_bindings.add(token)
 
 
 def _resolve_topic(argument_topic: str, message_topic: Optional[str]) -> str:
@@ -232,6 +264,9 @@ class _PikaChannelAdapter:
             durable=durable,
             auto_delete=auto_delete,
         )
+
+    def queue_bind(self, queue: str, exchange: str, routing_key: str) -> None:
+        self._channel.queue_bind(queue=queue, exchange=exchange, routing_key=routing_key)
 
 
 def _connect_channel(url: str) -> tuple[object, object]:

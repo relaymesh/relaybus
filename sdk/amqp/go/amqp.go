@@ -25,6 +25,8 @@ type Config struct {
 	ExchangeType       string
 	RoutingKeyTemplate string
 	Queue              string
+	QueueDurable       bool
+	QueueAutoDelete    bool
 	Mandatory          bool
 	Immediate          bool
 }
@@ -36,11 +38,14 @@ type Publisher struct {
 	exchangeType       string
 	routingKeyTemplate string
 	queue              string
+	queueDurable       bool
+	queueAutoDelete    bool
 	mandatory          bool
 	immediate          bool
 	mu                 sync.Mutex
 	ensuredQueues       map[string]struct{}
 	ensuredExchanges    map[string]struct{}
+	ensuredBindings     map[string]struct{}
 }
 
 func NewPublisher(cfg Config) (*Publisher, error) {
@@ -69,10 +74,13 @@ func NewPublisher(cfg Config) (*Publisher, error) {
 		exchangeType:       defaultExchangeType(cfg.ExchangeType),
 		routingKeyTemplate: cfg.RoutingKeyTemplate,
 		queue:              cfg.Queue,
+		queueDurable:       cfg.QueueDurable,
+		queueAutoDelete:    cfg.QueueAutoDelete,
 		mandatory:          cfg.Mandatory,
 		immediate:          cfg.Immediate,
 		ensuredQueues:      map[string]struct{}{},
 		ensuredExchanges:   map[string]struct{}{},
+		ensuredBindings:    map[string]struct{}{},
 	}, nil
 }
 
@@ -145,6 +153,10 @@ type exchangeDeclarer interface {
 	ExchangeDeclare(name, kind string, durable, autoDelete, internal, noWait bool, args amqp.Table) error
 }
 
+type queueBinder interface {
+	QueueBind(name, key, exchange string, noWait bool, args amqp.Table) error
+}
+
 func (p *Publisher) ensureInfrastructure(ctx context.Context, topic string) error {
 	if p.exchange != "" {
 		if declarer, ok := p.channel.(exchangeDeclarer); ok {
@@ -163,7 +175,18 @@ func (p *Publisher) ensureInfrastructure(ctx context.Context, topic string) erro
 	if queueName != "" {
 		if declarer, ok := p.channel.(queueDeclarer); ok {
 			if p.markQueueEnsured(queueName) {
-				if _, err := declarer.QueueDeclare(queueName, false, true, false, false, nil); err != nil {
+				if _, err := declarer.QueueDeclare(queueName, p.queueDurable, p.queueAutoDelete, false, false, nil); err != nil {
+					return errdefs.TransientError{Err: err}
+				}
+			}
+		}
+	}
+
+	if p.exchange != "" && queueName != "" {
+		if binder, ok := p.channel.(queueBinder); ok {
+			key := buildRoutingKey(p.routingKeyTemplate, topic)
+			if p.markBindingEnsured(queueName, p.exchange, key) {
+				if err := binder.QueueBind(queueName, key, p.exchange, false, nil); err != nil {
 					return errdefs.TransientError{Err: err}
 				}
 			}
@@ -189,6 +212,17 @@ func (p *Publisher) markExchangeEnsured(name string) bool {
 		return false
 	}
 	p.ensuredExchanges[name] = struct{}{}
+	return true
+}
+
+func (p *Publisher) markBindingEnsured(queue, exchange, key string) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	token := queue + "|" + exchange + "|" + key
+	if _, exists := p.ensuredBindings[token]; exists {
+		return false
+	}
+	p.ensuredBindings[token] = struct{}{}
 	return true
 }
 

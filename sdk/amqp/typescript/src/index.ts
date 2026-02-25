@@ -28,6 +28,11 @@ export type AmqpChannel = {
     type: string,
     options?: { durable?: boolean; autoDelete?: boolean; internal?: boolean }
   ) => Promise<unknown> | unknown;
+  bindQueue?: (
+    queue: string,
+    exchange: string,
+    routingKey: string
+  ) => Promise<unknown> | unknown;
 };
 
 export type AmqpSubscriberConfig = {
@@ -40,6 +45,7 @@ export type AmqpPublisherConfig = {
   routingKeyTemplate?: string;
   exchangeType?: string;
   queue?: string;
+  queueOptions?: { durable?: boolean; autoDelete?: boolean; exclusive?: boolean };
 };
 
 export type AmqpPublisherConnectConfig = {
@@ -48,6 +54,7 @@ export type AmqpPublisherConnectConfig = {
   routingKeyTemplate?: string;
   exchangeType?: string;
   queue?: string;
+  queueOptions?: { durable?: boolean; autoDelete?: boolean; exclusive?: boolean };
 };
 
 export type AmqpSubscriberConnectConfig = {
@@ -57,6 +64,7 @@ export type AmqpSubscriberConnectConfig = {
   exchangeType?: string;
   routingKeyTemplate?: string;
   queue?: string;
+  queueOptions?: { durable?: boolean; autoDelete?: boolean; exclusive?: boolean };
 };
 
 export class AmqpSubscriber {
@@ -67,6 +75,7 @@ export class AmqpSubscriber {
   private exchangeType?: string;
   private routingKeyTemplate?: string;
   private queue?: string;
+  private queueOptions?: { durable?: boolean; autoDelete?: boolean; exclusive?: boolean };
 
   constructor(config: AmqpSubscriberConfig) {
     this.onMessage = config.onMessage;
@@ -82,6 +91,7 @@ export class AmqpSubscriber {
     subscriber.exchangeType = config.exchangeType ?? "topic";
     subscriber.routingKeyTemplate = config.routingKeyTemplate ?? "{topic}";
     subscriber.queue = config.queue;
+    subscriber.queueOptions = config.queueOptions;
     return subscriber;
   }
 
@@ -101,7 +111,7 @@ export class AmqpSubscriber {
       });
     }
     const queueName = this.queue ?? topic;
-    await this.channel.assertQueue(queueName, { durable: false, autoDelete: true });
+    await this.channel.assertQueue(queueName, normalizeQueueOptions(this.queueOptions));
     if (this.exchange) {
       const key = buildRoutingKey(this.routingKeyTemplate ?? "{topic}", topic);
       await this.channel.bindQueue(queueName, this.exchange, key);
@@ -140,8 +150,10 @@ export class AmqpPublisher {
   private readonly routingKeyTemplate: string;
   private readonly exchangeType: string;
   private readonly queue?: string;
+  private readonly queueOptions?: { durable?: boolean; autoDelete?: boolean; exclusive?: boolean };
   private readonly ensuredQueues = new Set<string>();
   private readonly ensuredExchanges = new Set<string>();
+  private readonly ensuredBindings = new Set<string>();
   private connection?: ChannelModel;
   private confirmChannel?: ConfirmChannel;
 
@@ -151,6 +163,7 @@ export class AmqpPublisher {
     this.routingKeyTemplate = config.routingKeyTemplate ?? "{topic}";
     this.exchangeType = config.exchangeType ?? "topic";
     this.queue = config.queue;
+    this.queueOptions = config.queueOptions;
   }
 
   static async connect(config: AmqpPublisherConnectConfig): Promise<AmqpPublisher> {
@@ -170,12 +183,14 @@ export class AmqpPublisher {
           });
         },
         assertQueue: (queue, options) => channel.assertQueue(queue, options),
-        assertExchange: (exchange, type, options) => channel.assertExchange(exchange, type, options)
+        assertExchange: (exchange, type, options) => channel.assertExchange(exchange, type, options),
+        bindQueue: (queue, exchange, routingKey) => channel.bindQueue(queue, exchange, routingKey)
       },
       exchange: config.exchange,
       routingKeyTemplate: config.routingKeyTemplate,
       exchangeType: config.exchangeType,
-      queue: config.queue
+      queue: config.queue,
+      queueOptions: config.queueOptions
     });
     publisher.connection = connection;
     publisher.confirmChannel = channel;
@@ -222,9 +237,18 @@ export class AmqpPublisher {
     if (queueName && this.channel.assertQueue) {
       if (!this.ensuredQueues.has(queueName)) {
         await Promise.resolve(
-          this.channel.assertQueue(queueName, { durable: false, autoDelete: true })
+          this.channel.assertQueue(queueName, normalizeQueueOptions(this.queueOptions))
         );
         this.ensuredQueues.add(queueName);
+      }
+    }
+
+    if (this.exchange && queueName && this.channel.bindQueue) {
+      const routingKey = buildRoutingKey(this.routingKeyTemplate, topic);
+      const bindingKey = `${queueName}::${this.exchange}::${routingKey}`;
+      if (!this.ensuredBindings.has(bindingKey)) {
+        await Promise.resolve(this.channel.bindQueue(queueName, this.exchange, routingKey));
+        this.ensuredBindings.add(bindingKey);
       }
     }
   }
@@ -249,4 +273,14 @@ function buildRoutingKey(template: string, topic: string): string {
     return template.split("{topic}").join(topic);
   }
   return template;
+}
+
+function normalizeQueueOptions(
+  options?: { durable?: boolean; autoDelete?: boolean; exclusive?: boolean }
+): { durable: boolean; autoDelete: boolean; exclusive: boolean } {
+  return {
+    durable: options?.durable ?? false,
+    autoDelete: options?.autoDelete ?? false,
+    exclusive: options?.exclusive ?? false
+  };
 }
