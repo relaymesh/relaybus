@@ -18,22 +18,27 @@ func main() {
 	url := flag.String("url", "amqp://guest:guest@localhost:5672/", "")
 	topic := flag.String("topic", "relaybus.alpha", "")
 	exchange := flag.String("exchange", "relaybus.events", "")
+	queue := flag.String("queue", "", "")
 	flag.Parse()
+	if *queue == "" {
+		*queue = *topic + ".queue"
+	}
 
 	if *mode == "sub" {
-		runSubscriber(*url, *topic, *exchange)
+		runSubscriber(*url, *topic, *exchange, *queue)
 		return
 	}
 
-	runPublisher(*url, *topic, *exchange)
+	runPublisher(*url, *topic, *exchange, *queue)
 }
 
-func runSubscriber(url, topic, exchange string) {
+func runSubscriber(url, topic, exchange, queue string) {
 	sub, err := amqpadapter.NewSubscriber(amqpadapter.SubscriberConfig{
 		URL:                url,
 		Exchange:           exchange,
 		ExchangeType:       "topic",
 		RoutingKeyTemplate: "{topic}",
+		Queue:              queue,
 		AutoAck:            false,
 		MaxMessages:        1,
 		Handler: func(_ context.Context, msg message.Message) error {
@@ -51,7 +56,7 @@ func runSubscriber(url, topic, exchange string) {
 	}
 }
 
-func runPublisher(url, topic, exchange string) {
+func runPublisher(url, topic, exchange, queue string) {
 	pub, err := core.NewPublisher(core.Config{
 		Destination: "amqp",
 		AMQP: amqpadapter.Config{
@@ -59,6 +64,7 @@ func runPublisher(url, topic, exchange string) {
 			Exchange:           exchange,
 			ExchangeType:       "topic",
 			RoutingKeyTemplate: "{topic}",
+			Queue:              queue,
 		},
 	})
 	if err != nil {

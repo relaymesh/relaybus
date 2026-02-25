@@ -18,6 +18,7 @@ def main() -> None:
     topic = os.getenv("TOPIC", "relaybus.alpha")
     exchange = os.getenv("AMQP_EXCHANGE", "relaybus.events")
     exchange_type = os.getenv("AMQP_EXCHANGE_TYPE", "topic")
+    queue = os.getenv("AMQP_QUEUE", f"{topic}.queue")
 
     if mode == "sub":
         subscriber = AmqpSubscriber.connect(
@@ -28,7 +29,7 @@ def main() -> None:
                 on_message=lambda msg: print(
                     f"received id={msg.id} topic={msg.topic} payload={msg.payload.decode()}"
                 ),
-                queue=topic,
+                queue=queue,
             )
         )
         subscriber.start(topic)
@@ -36,7 +37,9 @@ def main() -> None:
         return
 
     publisher = AmqpPublisher.connect(
-        AmqpPublisherConnectConfig(url=url, exchange=exchange, exchange_type=exchange_type)
+        AmqpPublisherConnectConfig(
+            url=url, exchange=exchange, exchange_type=exchange_type, queue=queue
+        )
     )
     publisher.publish(topic, OutgoingMessage(topic=topic, payload=b"hello from python", meta={"lang": "py"}))
     publisher.close()
