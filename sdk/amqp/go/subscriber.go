@@ -13,6 +13,7 @@ import (
 type SubscriberConfig struct {
 	URL                string
 	Exchange           string
+	ExchangeType       string
 	RoutingKeyTemplate string
 	Queue              string
 	AutoAck            bool
@@ -24,6 +25,7 @@ type Subscriber struct {
 	handler            func(ctx context.Context, msg message.Message) error
 	url                string
 	exchange           string
+	exchangeType       string
 	routingKeyTemplate string
 	queue              string
 	autoAck            bool
@@ -38,6 +40,7 @@ func NewSubscriber(cfg SubscriberConfig) (*Subscriber, error) {
 		handler:            cfg.Handler,
 		url:                cfg.URL,
 		exchange:           cfg.Exchange,
+		exchangeType:       defaultExchangeType(cfg.ExchangeType),
 		routingKeyTemplate: cfg.RoutingKeyTemplate,
 		queue:              cfg.Queue,
 		autoAck:            cfg.AutoAck,
@@ -76,6 +79,11 @@ func (s *Subscriber) Start(ctx context.Context, topic string) error {
 	queueName := s.queue
 	if queueName == "" {
 		queueName = topic
+	}
+	if s.exchange != "" {
+		if err := ch.ExchangeDeclare(s.exchange, s.exchangeType, false, false, false, false, nil); err != nil {
+			return err
+		}
 	}
 	q, err := ch.QueueDeclare(queueName, false, true, false, false, nil)
 	if err != nil {

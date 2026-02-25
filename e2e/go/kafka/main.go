@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -32,21 +33,27 @@ func main() {
 func runSubscriber(broker, topic string) {
 	ensureTopic(broker, topic)
 
+	received := false
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 	sub, err := kafkaadapter.NewSubscriber(kafkaadapter.SubscriberConfig{
 		Broker:      broker,
 		GroupID:     "relaybus-e2e",
 		MaxMessages: 1,
 		Handler: func(_ context.Context, msg message.Message) error {
 			fmt.Printf("received id=%s topic=%s payload=%s\n", msg.ID, msg.Topic, string(msg.Payload))
+			received = true
+			cancel()
 			return nil
 		}})
 	if err != nil {
 		log.Fatalf("subscriber: %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
 	if err := sub.Start(ctx, topic); err != nil {
+		if received && errors.Is(err, context.Canceled) {
+			return
+		}
 		log.Fatalf("start: %v", err)
 	}
 }

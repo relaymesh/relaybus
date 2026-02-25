@@ -197,7 +197,8 @@ class _KafkaPythonProducerAdapter:
         self._producer = producer
 
     def send(self, topic_name: str, key: Optional[bytes], value: bytes) -> None:
-        self._producer.send(topic_name, key=key, value=value)
+        future = self._producer.send(topic_name, key=key, value=value)
+        future.get(timeout=10)
         self._producer.flush()
 
 

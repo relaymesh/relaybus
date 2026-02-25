@@ -54,6 +54,7 @@ export type AmqpSubscriberConnectConfig = {
   url: string;
   onMessage: (msg: DecodedMessage) => void | Promise<void>;
   exchange?: string;
+  exchangeType?: string;
   routingKeyTemplate?: string;
   queue?: string;
 };
@@ -63,6 +64,7 @@ export class AmqpSubscriber {
   private channel?: Channel;
   private connection?: ChannelModel;
   private exchange?: string;
+  private exchangeType?: string;
   private routingKeyTemplate?: string;
   private queue?: string;
 
@@ -77,6 +79,7 @@ export class AmqpSubscriber {
     subscriber.channel = channel;
     subscriber.connection = connection;
     subscriber.exchange = config.exchange ?? "";
+    subscriber.exchangeType = config.exchangeType ?? "topic";
     subscriber.routingKeyTemplate = config.routingKeyTemplate ?? "{topic}";
     subscriber.queue = config.queue;
     return subscriber;
@@ -90,6 +93,12 @@ export class AmqpSubscriber {
   async start(topic: string): Promise<void> {
     if (!this.channel) {
       throw new Error("channel is not initialized");
+    }
+    if (this.exchange) {
+      await this.channel.assertExchange(this.exchange, this.exchangeType ?? "topic", {
+        durable: false,
+        autoDelete: false
+      });
     }
     const queueName = this.queue ?? topic;
     await this.channel.assertQueue(queueName, { durable: false, autoDelete: true });

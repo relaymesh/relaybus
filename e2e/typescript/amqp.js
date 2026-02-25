@@ -4,10 +4,15 @@ async function main() {
   const mode = process.argv[2] || "sub";
   const url = process.env.AMQP_URL || "amqp://guest:guest@localhost:5672/";
   const topic = process.env.TOPIC || "relaybus.alpha";
+  const exchange = process.env.AMQP_EXCHANGE || "relaybus.events";
+  const exchangeType = process.env.AMQP_EXCHANGE_TYPE || "topic";
 
   if (mode === "sub") {
     const subscriber = await AmqpSubscriber.connect({
       url,
+      exchange,
+      exchangeType,
+      queue: topic,
       onMessage: (msg) => {
         console.log(`received id=${msg.id} topic=${msg.topic} payload=${msg.payload.toString()}`);
       }
@@ -18,7 +23,7 @@ async function main() {
     return;
   }
 
-  const publisher = await AmqpPublisher.connect({ url });
+  const publisher = await AmqpPublisher.connect({ url, exchange, exchangeType });
 
   await publisher.publish(topic, {
     topic,

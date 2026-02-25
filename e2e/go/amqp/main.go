@@ -17,21 +17,25 @@ func main() {
 	mode := flag.String("mode", "sub", "sub|pub")
 	url := flag.String("url", "amqp://guest:guest@localhost:5672/", "")
 	topic := flag.String("topic", "relaybus.alpha", "")
+	exchange := flag.String("exchange", "relaybus.events", "")
 	flag.Parse()
 
 	if *mode == "sub" {
-		runSubscriber(*url, *topic)
+		runSubscriber(*url, *topic, *exchange)
 		return
 	}
 
-	runPublisher(*url, *topic)
+	runPublisher(*url, *topic, *exchange)
 }
 
-func runSubscriber(url, topic string) {
+func runSubscriber(url, topic, exchange string) {
 	sub, err := amqpadapter.NewSubscriber(amqpadapter.SubscriberConfig{
-		URL:         url,
-		AutoAck:     false,
-		MaxMessages: 1,
+		URL:                url,
+		Exchange:           exchange,
+		ExchangeType:       "topic",
+		RoutingKeyTemplate: "{topic}",
+		AutoAck:            false,
+		MaxMessages:        1,
 		Handler: func(_ context.Context, msg message.Message) error {
 			fmt.Printf("received id=%s topic=%s payload=%s\n", msg.ID, msg.Topic, string(msg.Payload))
 			return nil
@@ -47,12 +51,13 @@ func runSubscriber(url, topic string) {
 	}
 }
 
-func runPublisher(url, topic string) {
+func runPublisher(url, topic, exchange string) {
 	pub, err := core.NewPublisher(core.Config{
 		Destination: "amqp",
 		AMQP: amqpadapter.Config{
 			URL:                url,
-			Exchange:           "",
+			Exchange:           exchange,
+			ExchangeType:       "topic",
 			RoutingKeyTemplate: "{topic}",
 		},
 	})

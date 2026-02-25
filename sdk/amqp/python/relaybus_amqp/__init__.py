@@ -22,6 +22,7 @@ class AmqpSubscriberConnectConfig:
     url: str
     on_message: Callable[[Message], None]
     exchange: str = ""
+    exchange_type: str = "topic"
     routing_key_template: str = "{topic}"
     queue: Optional[str] = None
 
@@ -50,6 +51,7 @@ class AmqpSubscriber:
         self._channel = None
         self._connection = None
         self._exchange = ""
+        self._exchange_type = "topic"
         self._routing_key_template = "{topic}"
         self._queue = None
 
@@ -60,6 +62,7 @@ class AmqpSubscriber:
         subscriber._channel = channel
         subscriber._connection = connection
         subscriber._exchange = config.exchange
+        subscriber._exchange_type = config.exchange_type
         subscriber._routing_key_template = config.routing_key_template
         subscriber._queue = config.queue
         return subscriber
@@ -71,6 +74,13 @@ class AmqpSubscriber:
     def start(self, topic: str, timeout: float = 30.0) -> None:
         if self._channel is None:
             raise ValueError("channel is not initialized")
+        if self._exchange:
+            self._channel.exchange_declare(
+                exchange=self._exchange,
+                exchange_type=getattr(self, "_exchange_type", "topic"),
+                durable=False,
+                auto_delete=False,
+            )
         queue_name = self._queue or topic
         self._channel.queue_declare(queue=queue_name, durable=False, auto_delete=True)
         if self._exchange:
