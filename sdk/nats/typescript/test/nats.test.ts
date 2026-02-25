@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { NatsPublisher, NatsSubscriber } from "../src/index";
-import { decodeEnvelope } from "@relaymesh/relaybus-core";
+import { decodeEnvelope } from "../src/core";
 
 describe("NatsPublisher", () => {
   it("publishes encoded envelope with subject prefix", async () => {

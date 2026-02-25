@@ -10,6 +10,8 @@ pip install relaybus-kafka
 
 ## Example
 
+Publisher will attempt to create the topic on first publish (requires broker permissions).
+
 ```python
 from relaybus_core import OutgoingMessage
 from relaybus_kafka import (

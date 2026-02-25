@@ -31,6 +31,8 @@ class AmqpPublisherConfig:
     channel: object
     exchange: str = ""
     routing_key_template: str = "{topic}"
+    exchange_type: str = "topic"
+    queue: Optional[str] = None
 
 
 @dataclass
@@ -38,6 +40,8 @@ class AmqpPublisherConnectConfig:
     url: str
     exchange: str = ""
     routing_key_template: str = "{topic}"
+    exchange_type: str = "topic"
+    queue: Optional[str] = None
 
 
 class AmqpSubscriber:
@@ -103,6 +107,10 @@ class AmqpPublisher:
         self._channel = config.channel
         self._exchange = config.exchange
         self._routing_key_template = config.routing_key_template
+        self._exchange_type = config.exchange_type
+        self._queue = config.queue
+        self._ensured_exchanges: set[str] = set()
+        self._ensured_queues: set[str] = set()
         self._connection = None
 
     @classmethod
@@ -113,6 +121,8 @@ class AmqpPublisher:
                 channel=_PikaChannelAdapter(channel),
                 exchange=config.exchange,
                 routing_key_template=config.routing_key_template,
+                exchange_type=config.exchange_type,
+                queue=config.queue,
             )
         )
         publisher._connection = connection
@@ -120,6 +130,7 @@ class AmqpPublisher:
 
     def publish(self, topic: str, message: OutgoingMessage) -> None:
         resolved = _resolve_topic(topic, message.topic)
+        self._ensure_infrastructure(resolved)
         envelope = encode_envelope(
             OutgoingMessage(
                 topic=resolved,
@@ -147,6 +158,26 @@ class AmqpPublisher:
                 self._connection.close()
             except Exception:
                 pass
+
+    def _ensure_infrastructure(self, topic: str) -> None:
+        if self._exchange:
+            if self._exchange not in self._ensured_exchanges:
+                declare_exchange = getattr(self._channel, "exchange_declare", None)
+                if callable(declare_exchange):
+                    declare_exchange(
+                        exchange=self._exchange,
+                        exchange_type=self._exchange_type,
+                        durable=False,
+                        auto_delete=False,
+                    )
+                self._ensured_exchanges.add(self._exchange)
+
+        queue_name = self._queue or topic
+        if queue_name and queue_name not in self._ensured_queues:
+            declare_queue = getattr(self._channel, "queue_declare", None)
+            if callable(declare_queue):
+                declare_queue(queue=queue_name, durable=False, auto_delete=True)
+            self._ensured_queues.add(queue_name)
 
 
 def _resolve_topic(argument_topic: str, message_topic: Optional[str]) -> str:
@@ -178,6 +209,19 @@ class _PikaChannelAdapter:
             headers=properties.get("headers") if properties else None,
         )
         self._channel.basic_publish(exchange=exchange, routing_key=routing_key, body=body, properties=props)
+
+    def queue_declare(self, queue: str, durable: bool, auto_delete: bool) -> None:
+        self._channel.queue_declare(queue=queue, durable=durable, auto_delete=auto_delete)
+
+    def exchange_declare(
+        self, exchange: str, exchange_type: str, durable: bool, auto_delete: bool
+    ) -> None:
+        self._channel.exchange_declare(
+            exchange=exchange,
+            exchange_type=exchange_type,
+            durable=durable,
+            auto_delete=auto_delete,
+        )
 
 
 def _connect_channel(url: str) -> tuple[object, object]:

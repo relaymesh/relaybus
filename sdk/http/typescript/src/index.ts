@@ -1,4 +1,4 @@
-import { decodeEnvelope, encodeEnvelope, DecodedMessage, OutgoingMessage } from "@relaymesh/relaybus-core";
+import { decodeEnvelope, encodeEnvelope, DecodedMessage, OutgoingMessage } from "./core";
 import http from "node:http";
 
 export type HttpRequest = {

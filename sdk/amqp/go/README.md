@@ -22,8 +22,10 @@ import (
 
 func main() {
 	pub, err := amqpadapter.NewPublisher(amqpadapter.Config{
-		URL:                "amqp://guest:guest@localhost:5672/",
-		RoutingKeyTemplate: "{topic}",
+		URL:          "amqp://guest:guest@localhost:5672/",
+		Exchange:     "relaybus.events",
+		ExchangeType: "topic",
+		Queue:        "relaybus.demo",
 	})
 	if err != nil {
 		log.Fatal(err)

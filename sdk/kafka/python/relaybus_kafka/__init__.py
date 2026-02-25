@@ -13,6 +13,7 @@ from relaybus_core import Message, OutgoingMessage, decode_envelope, encode_enve
 class KafkaPublisherConfig:
     producer: object
     topic_prefix: str = ""
+    admin: Optional[object] = None
 
 
 @dataclass
@@ -27,6 +28,9 @@ class KafkaPublisher:
             raise ValueError("producer is required")
         self._producer = config.producer
         self._prefix = config.topic_prefix
+        self._admin = config.admin
+        self._owns_admin = False
+        self._ensured_topics: set[str] = set()
         self._raw_producer = None
 
     @classmethod
@@ -38,15 +42,19 @@ class KafkaPublisher:
         else:
             broker_list = ",".join(brokers)
         from kafka import KafkaProducer
+        from kafka.admin import KafkaAdminClient
 
         producer = KafkaProducer(bootstrap_servers=broker_list)
+        admin = KafkaAdminClient(bootstrap_servers=broker_list, client_id="relaybus")
         publisher = cls(
             KafkaPublisherConfig(
                 producer=_KafkaPythonProducerAdapter(producer),
                 topic_prefix=config.topic_prefix,
+                admin=admin,
             )
         )
         publisher._raw_producer = producer
+        publisher._owns_admin = True
         return publisher
 
     def publish(self, topic: str, message: OutgoingMessage) -> None:
@@ -64,7 +72,9 @@ class KafkaPublisher:
         send = getattr(self._producer, "send", None)
         if not callable(send):
             raise ValueError("producer must define send")
-        send(f"{self._prefix}{resolved}", message.id.encode() if message.id else None, envelope)
+        full_topic = f"{self._prefix}{resolved}"
+        self._ensure_topic(full_topic)
+        send(full_topic, message.id.encode() if message.id else None, envelope)
 
     def close(self) -> None:
         if self._raw_producer is not None:
@@ -72,6 +82,31 @@ class KafkaPublisher:
                 self._raw_producer.flush()
             finally:
                 self._raw_producer.close()
+        if self._admin is not None:
+            if self._owns_admin:
+                try:
+                    self._admin.close()
+                except Exception:
+                    pass
+
+    def _ensure_topic(self, topic: str) -> None:
+        if self._admin is None:
+            return
+        if topic in self._ensured_topics:
+            return
+        create_topics = getattr(self._admin, "create_topics", None)
+        if not callable(create_topics):
+            return
+        try:
+            from kafka.admin import NewTopic
+            from kafka.errors import TopicAlreadyExistsError
+        except Exception:
+            return
+        try:
+            create_topics(new_topics=[NewTopic(name=topic, num_partitions=1, replication_factor=1)])
+        except TopicAlreadyExistsError:
+            pass
+        self._ensured_topics.add(topic)
 
 
 @dataclass

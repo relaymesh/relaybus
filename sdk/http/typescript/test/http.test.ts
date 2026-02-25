@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { HttpPublisher, HttpSubscriber } from "../src/index";
-import { decodeEnvelope } from "@relaymesh/relaybus-core";
+import { decodeEnvelope } from "../src/core";
 
 describe("HttpPublisher", () => {
   it("posts encoded envelope", async () => {

@@ -4,11 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "relaybus-kafka"
-version = "0.0.5"
+version = "0.0.6"
 description = "Relaybus Kafka publisher and subscriber"
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = ["relaybus-core", "kafka-python>=2.0.2", "six>=1.16.0"]
+dependencies = ["kafka-python>=2.0.2", "six>=1.16.0"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["relaybus_kafka"]
+packages = ["relaybus_kafka", "relaybus_core"]

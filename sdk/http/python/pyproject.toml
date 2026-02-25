@@ -4,11 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "relaybus-http"
-version = "0.0.5"
+version = "0.0.6"
 description = "Relaybus HTTP publisher and subscriber"
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = ["relaybus-core"]
+dependencies = []
 
 [tool.hatch.build.targets.wheel]
-packages = ["relaybus_http"]
+packages = ["relaybus_http", "relaybus_core"]

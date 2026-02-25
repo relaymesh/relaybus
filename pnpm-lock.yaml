@@ -29,9 +29,6 @@ importers:
 
   sdk/amqp/typescript:
     dependencies:
-      '@relaymesh/relaybus-core':
-        specifier: 0.0.4
-        version: 0.0.4
       amqplib:
         specifier: ^0.10.9
         version: 0.10.9
@@ -42,26 +39,16 @@ importers:
 
   sdk/core/typescript: {}
 
-  sdk/http/typescript:
-    dependencies:
-      '@relaymesh/relaybus-core':
-        specifier: 0.0.4
-        version: 0.0.4
+  sdk/http/typescript: {}
 
   sdk/kafka/typescript:
     dependencies:
-      '@relaymesh/relaybus-core':
-        specifier: 0.0.4
-        version: 0.0.4
       kafkajs:
         specifier: ^2.2.4
         version: 2.2.4
 
   sdk/nats/typescript:
     dependencies:
-      '@relaymesh/relaybus-core':
-        specifier: 0.0.4
-        version: 0.0.4
       nats:
         specifier: ^2.29.3
         version: 2.29.3
@@ -212,9 +199,6 @@ packages:
 
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
-
-  '@relaymesh/relaybus-core@0.0.4':
-    resolution: {integrity: sha512-aq0brIB7rQggjhcmpC6PPg1AeGp38mES9wrr9jZrOAKljHwuI/6dkxCA+vpGrnxWBe/WN3GrcYA0j7NKg7KYsw==}
 
   '@rollup/rollup-android-arm-eabi@4.59.0':
     resolution: {integrity: sha512-upnNBkA6ZH2VKGcBj9Fyl9IGNPULcjXRlg0LLeaioQWueH30p6IXtJEbKAgvyv+mJaMxSm1l6xwDXYjpEMiLMg==}
@@ -776,8 +760,6 @@ snapshots:
       '@sinclair/typebox': 0.27.10
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
-
-  '@relaymesh/relaybus-core@0.0.4': {}
 
   '@rollup/rollup-android-arm-eabi@4.59.0':
     optional: true

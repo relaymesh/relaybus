@@ -10,6 +10,8 @@ npm install @relaymesh/relaybus-kafka
 
 ## Example
 
+Publisher will attempt to create the topic on first publish (requires broker permissions).
+
 ```ts
 import { KafkaPublisher, KafkaSubscriber } from "@relaymesh/relaybus-kafka";
 

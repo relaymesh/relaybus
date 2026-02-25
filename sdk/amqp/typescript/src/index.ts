@@ -1,4 +1,4 @@
-import { decodeEnvelope, encodeEnvelope, DecodedMessage, OutgoingMessage } from "@relaymesh/relaybus-core";
+import { decodeEnvelope, encodeEnvelope, DecodedMessage, OutgoingMessage } from "./core";
 import { connect, Channel, ChannelModel, ConsumeMessage, ConfirmChannel } from "amqplib";
 
 export type Delivery = {
@@ -19,6 +19,15 @@ export type AmqpChannel = {
     content: Buffer,
     options?: PublishOptions
   ) => Promise<void> | void;
+  assertQueue?: (
+    queue: string,
+    options?: { durable?: boolean; autoDelete?: boolean; exclusive?: boolean }
+  ) => Promise<unknown> | unknown;
+  assertExchange?: (
+    exchange: string,
+    type: string,
+    options?: { durable?: boolean; autoDelete?: boolean; internal?: boolean }
+  ) => Promise<unknown> | unknown;
 };
 
 export type AmqpSubscriberConfig = {
@@ -29,12 +38,16 @@ export type AmqpPublisherConfig = {
   channel: AmqpChannel;
   exchange?: string;
   routingKeyTemplate?: string;
+  exchangeType?: string;
+  queue?: string;
 };
 
 export type AmqpPublisherConnectConfig = {
   url: string;
   exchange?: string;
   routingKeyTemplate?: string;
+  exchangeType?: string;
+  queue?: string;
 };
 
 export type AmqpSubscriberConnectConfig = {
@@ -116,6 +129,10 @@ export class AmqpPublisher {
   private readonly channel: AmqpChannel;
   private readonly exchange: string;
   private readonly routingKeyTemplate: string;
+  private readonly exchangeType: string;
+  private readonly queue?: string;
+  private readonly ensuredQueues = new Set<string>();
+  private readonly ensuredExchanges = new Set<string>();
   private connection?: ChannelModel;
   private confirmChannel?: ConfirmChannel;
 
@@ -123,6 +140,8 @@ export class AmqpPublisher {
     this.channel = config.channel;
     this.exchange = config.exchange ?? "";
     this.routingKeyTemplate = config.routingKeyTemplate ?? "{topic}";
+    this.exchangeType = config.exchangeType ?? "topic";
+    this.queue = config.queue;
   }
 
   static async connect(config: AmqpPublisherConnectConfig): Promise<AmqpPublisher> {
@@ -140,10 +159,14 @@ export class AmqpPublisher {
               resolve();
             });
           });
-        }
+        },
+        assertQueue: (queue, options) => channel.assertQueue(queue, options),
+        assertExchange: (exchange, type, options) => channel.assertExchange(exchange, type, options)
       },
       exchange: config.exchange,
-      routingKeyTemplate: config.routingKeyTemplate
+      routingKeyTemplate: config.routingKeyTemplate,
+      exchangeType: config.exchangeType,
+      queue: config.queue
     });
     publisher.connection = connection;
     publisher.confirmChannel = channel;
@@ -152,6 +175,7 @@ export class AmqpPublisher {
 
   async publish(topic: string, message: OutgoingMessage): Promise<void> {
     const resolved = resolveTopic(topic, message.topic);
+    await this.ensureInfrastructure(resolved);
     const payload = encodeEnvelope({ ...message, topic: resolved });
     const routingKey = buildRoutingKey(this.routingKeyTemplate, resolved);
     const options: PublishOptions = {
@@ -169,6 +193,30 @@ export class AmqpPublisher {
     }
     if (this.connection) {
       await this.connection.close();
+    }
+  }
+
+  private async ensureInfrastructure(topic: string): Promise<void> {
+    if (this.exchange && this.channel.assertExchange) {
+      if (!this.ensuredExchanges.has(this.exchange)) {
+        await Promise.resolve(
+          this.channel.assertExchange(this.exchange, this.exchangeType, {
+            durable: false,
+            autoDelete: false
+          })
+        );
+        this.ensuredExchanges.add(this.exchange);
+      }
+    }
+
+    const queueName = this.queue ?? topic;
+    if (queueName && this.channel.assertQueue) {
+      if (!this.ensuredQueues.has(queueName)) {
+        await Promise.resolve(
+          this.channel.assertQueue(queueName, { durable: false, autoDelete: true })
+        );
+        this.ensuredQueues.add(queueName);
+      }
     }
   }
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 
@@ -21,7 +22,9 @@ type Config struct {
 	URL                string
 	Channel            Channel
 	Exchange           string
+	ExchangeType       string
 	RoutingKeyTemplate string
+	Queue              string
 	Mandatory          bool
 	Immediate          bool
 }
@@ -30,9 +33,14 @@ type Publisher struct {
 	channel            Channel
 	connection         *amqp.Connection
 	exchange           string
+	exchangeType       string
 	routingKeyTemplate string
+	queue              string
 	mandatory          bool
 	immediate          bool
+	mu                 sync.Mutex
+	ensuredQueues       map[string]struct{}
+	ensuredExchanges    map[string]struct{}
 }
 
 func NewPublisher(cfg Config) (*Publisher, error) {
@@ -58,15 +66,22 @@ func NewPublisher(cfg Config) (*Publisher, error) {
 		channel:            channel,
 		connection:         conn,
 		exchange:           cfg.Exchange,
+		exchangeType:       defaultExchangeType(cfg.ExchangeType),
 		routingKeyTemplate: cfg.RoutingKeyTemplate,
+		queue:              cfg.Queue,
 		mandatory:          cfg.Mandatory,
 		immediate:          cfg.Immediate,
+		ensuredQueues:      map[string]struct{}{},
+		ensuredExchanges:   map[string]struct{}{},
 	}, nil
 }
 
 func (p *Publisher) Publish(ctx context.Context, topic string, msg message.Message) error {
 	if topic == "" {
 		return errors.New("topic is required")
+	}
+	if err := p.ensureInfrastructure(ctx, topic); err != nil {
+		return err
 	}
 	body, err := envelope.EncodeEnvelope(msg)
 	if err != nil {
@@ -120,4 +135,66 @@ func buildRoutingKey(template, topic string) string {
 		return strings.ReplaceAll(template, "{topic}", topic)
 	}
 	return template
+}
+
+type queueDeclarer interface {
+	QueueDeclare(name string, durable, autoDelete, exclusive, noWait bool, args amqp.Table) (amqp.Queue, error)
+}
+
+type exchangeDeclarer interface {
+	ExchangeDeclare(name, kind string, durable, autoDelete, internal, noWait bool, args amqp.Table) error
+}
+
+func (p *Publisher) ensureInfrastructure(ctx context.Context, topic string) error {
+	if p.exchange != "" {
+		if declarer, ok := p.channel.(exchangeDeclarer); ok {
+			if p.markExchangeEnsured(p.exchange) {
+				if err := declarer.ExchangeDeclare(p.exchange, p.exchangeType, false, false, false, false, nil); err != nil {
+					return errdefs.TransientError{Err: err}
+				}
+			}
+		}
+	}
+
+	queueName := p.queue
+	if queueName == "" {
+		queueName = topic
+	}
+	if queueName != "" {
+		if declarer, ok := p.channel.(queueDeclarer); ok {
+			if p.markQueueEnsured(queueName) {
+				if _, err := declarer.QueueDeclare(queueName, false, true, false, false, nil); err != nil {
+					return errdefs.TransientError{Err: err}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (p *Publisher) markQueueEnsured(name string) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if _, exists := p.ensuredQueues[name]; exists {
+		return false
+	}
+	p.ensuredQueues[name] = struct{}{}
+	return true
+}
+
+func (p *Publisher) markExchangeEnsured(name string) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if _, exists := p.ensuredExchanges[name]; exists {
+		return false
+	}
+	p.ensuredExchanges[name] = struct{}{}
+	return true
+}
+
+func defaultExchangeType(exchangeType string) string {
+	if exchangeType != "" {
+		return exchangeType
+	}
+	return "topic"
 }

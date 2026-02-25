@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { KafkaPublisher, KafkaSubscriber } from "../src/index";
-import { decodeEnvelope } from "@relaymesh/relaybus-core";
+import { decodeEnvelope } from "../src/core";
 
 describe("KafkaPublisher", () => {
   it("sends encoded envelope", async () => {

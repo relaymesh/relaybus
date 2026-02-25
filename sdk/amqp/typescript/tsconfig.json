@@ -4,11 +4,7 @@
     "rootDir": "src",
     "outDir": "dist",
     "declaration": true,
-    "types": ["node"],
-    "baseUrl": ".",
-    "paths": {
-      "@relaymesh/relaybus-core": ["../../core/typescript/dist"]
-    }
+    "types": ["node"]
   },
   "include": ["src/**/*.ts"]
 }

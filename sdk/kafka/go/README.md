@@ -8,6 +8,8 @@ This module declares `module github.com/relaymesh/relaybus` in `go.mod`.
 
 ## Example
 
+Publisher will attempt to create the topic on first publish (requires broker permissions).
+
 ```go
 package main
 

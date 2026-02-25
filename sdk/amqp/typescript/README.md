@@ -10,12 +10,20 @@ npm install @relaymesh/relaybus-amqp
 
 ## Example
 
+Publisher will assert the exchange/queue on first publish (defaults: `exchangeType: "topic"`, `queue: topic`).
+
 ```ts
 import { AmqpPublisher, AmqpSubscriber } from "@relaymesh/relaybus-amqp";
 
 async function main() {
+  const exchange = "relaybus.events";
+  const queue = "relaybus.demo";
+
   const publisher = await AmqpPublisher.connect({
-    url: "amqp://guest:guest@localhost:5672/"
+    url: "amqp://guest:guest@localhost:5672/",
+    exchange,
+    exchangeType: "topic",
+    queue
   });
   await publisher.publish("relaybus.demo", {
     topic: "relaybus.demo",
@@ -25,6 +33,8 @@ async function main() {
 
   const subscriber = await AmqpSubscriber.connect({
     url: "amqp://guest:guest@localhost:5672/",
+    exchange,
+    queue,
     onMessage: (msg) => console.log(msg.topic, msg.payload.toString())
   });
   await subscriber.start("relaybus.demo");
