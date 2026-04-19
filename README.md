@@ -4,20 +4,59 @@ Relaybus is a broker-agnostic messaging SDK with a stable envelope contract acro
 
 It is designed for teams that want transport flexibility (AMQP/NATS/Kafka/HTTP) without changing message semantics between languages.
 
-## Why relaybus
+## ✨ Why relaybus
 
 - Opaque payloads: relaybus never interprets your bytes; you control serialization.
 - Stable envelope: all transports use the same versioned JSON envelope.
 - Cross-language parity: shared corpus tests validate behavior across SDKs.
 - Library-first: small transport packages, no required runtime service from relaybus itself.
 
-## Project status
+## 🚦 Project status
 
 - Current schema: `v1`
 - Current transports: AMQP, NATS, Kafka, HTTP across Go/TypeScript/Python
 - Go-only extra: in-memory publisher adapter (`memory` destination)
 
-## Supported adapters
+## 🧭 Quickstart (5 minutes)
+
+### Option A: run full cross-language e2e in this repo
+
+Prerequisites:
+- Docker + Docker Compose
+- Go
+- Node 20+
+- Python 3.11+
+
+```bash
+pnpm install
+docker compose -f docker-compose.yaml up -d
+make e2e
+docker compose -f docker-compose.yaml down -v
+```
+
+This runs Go, TypeScript, and Python e2e flows against real brokers.
+
+### Option B: install and use packages directly
+
+TypeScript:
+
+```bash
+npm install @relaymesh/relaybus-core @relaymesh/relaybus-amqp @relaymesh/relaybus-nats @relaymesh/relaybus-kafka @relaymesh/relaybus-http
+```
+
+Python:
+
+```bash
+pip install relaybus-core relaybus-amqp relaybus-nats relaybus-kafka relaybus-http
+```
+
+Go:
+
+```bash
+go get github.com/relaymesh/relaybus/sdk/core/go
+```
+
+## 📦 Supported adapters
 
 | Adapter | Go | TypeScript | Python |
 | --- | --- | --- | --- |
@@ -27,7 +66,7 @@ It is designed for teams that want transport flexibility (AMQP/NATS/Kafka/HTTP) 
 | HTTP | publish + subscribe | publish + subscribe | publish + subscribe |
 | Memory | publish only | - | - |
 
-## Envelope contract (v1)
+## 📜 Envelope contract (v1)
 
 Every message is encoded as JSON with a base64 payload field.
 
@@ -48,27 +87,7 @@ Source of truth:
 - JSON Schema: `spec/envelope_v1.jsonschema`
 - Cross-language corpus: `spec/corpus/samples`, `spec/corpus/expected`
 
-## Install
-
-TypeScript (npm):
-
-```bash
-npm install @relaymesh/relaybus-core @relaymesh/relaybus-amqp @relaymesh/relaybus-nats @relaymesh/relaybus-kafka @relaymesh/relaybus-http
-```
-
-Python (PyPI):
-
-```bash
-pip install relaybus-core relaybus-amqp relaybus-nats relaybus-kafka relaybus-http
-```
-
-Go:
-
-```bash
-go get github.com/relaymesh/relaybus/sdk/core/go
-```
-
-## Quick example (Go publisher -> TypeScript subscriber over AMQP)
+## 🔁 Cross-language example (Go publisher -> TypeScript subscriber over AMQP)
 
 ```go
 package main
@@ -129,7 +148,7 @@ main().catch((err) => {
 });
 ```
 
-## Package docs
+## 📚 Package docs
 
 TypeScript:
 - `sdk/core/typescript/README.md`
@@ -152,7 +171,7 @@ Go:
 - `sdk/kafka/go`
 - `sdk/http/go`
 
-## Development
+## 🛠️ Development
 
 This repository is a multi-language monorepo.
 
@@ -162,7 +181,7 @@ Top-level layout:
 - `spec/`: schema + corpus fixtures used by tests
 - `scripts/`: repo tooling (`sync_core.py`, `bump_versions.py`, `e2e.sh`)
 
-Install JS workspace deps:
+Install JS workspace dependencies:
 
 ```bash
 pnpm install
@@ -188,7 +207,7 @@ Sync vendored core code into adapters (required after core TS/Python changes):
 python3 scripts/sync_core.py
 ```
 
-## CI and releases
+## 🚀 CI and releases
 
 - CI workflow: `.github/workflows/ci.yml`
 - Release workflow: `.github/workflows/release.yml` (tag push `v*`)
@@ -198,3 +217,9 @@ Version bump helper:
 ```bash
 make bump VERSION=0.x.y
 ```
+
+## ❓ Troubleshooting
+
+- E2E fails to connect to brokers: ensure Docker services are up with `docker compose -f docker-compose.yaml up -d`.
+- TypeScript tests fail with missing binaries: run `pnpm install` at repo root.
+- Cross-language behavior mismatch after core edits: run `python3 scripts/sync_core.py` and re-run tests.
