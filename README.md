@@ -1,15 +1,23 @@
 # relaybus
 
-Relaybus is a broker-agnostic messaging SDK built around a stable, testable envelope format. It keeps payloads opaque, focuses on predictable behavior, and makes it easy to mix languages within the same event stream.
+Relaybus is a broker-agnostic messaging SDK with a stable envelope contract across Go, TypeScript, and Python.
 
-## Design principles
+It is designed for teams that want transport flexibility (AMQP/NATS/Kafka/HTTP) without changing message semantics between languages.
 
-- Opaque payloads: the SDK never interprets your bytes, so you own serialization.
-- Stable envelope: versioned JSON with a required base64 payload field.
-- Deterministic testing: shared corpus samples validate every SDK the same way.
-- Library-first: no CLI, no examples folder, and no broker dependencies in unit tests.
+## Why relaybus
 
-## Supported adapters (iteration 1)
+- Opaque payloads: relaybus never interprets your bytes; you control serialization.
+- Stable envelope: all transports use the same versioned JSON envelope.
+- Cross-language parity: shared corpus tests validate behavior across SDKs.
+- Library-first: small transport packages, no required runtime service from relaybus itself.
+
+## Project status
+
+- Current schema: `v1`
+- Current transports: AMQP, NATS, Kafka, HTTP across Go/TypeScript/Python
+- Go-only extra: in-memory publisher adapter (`memory` destination)
+
+## Supported adapters
 
 | Adapter | Go | TypeScript | Python |
 | --- | --- | --- | --- |
@@ -19,19 +27,48 @@ Relaybus is a broker-agnostic messaging SDK built around a stable, testable enve
 | HTTP | publish + subscribe | publish + subscribe | publish + subscribe |
 | Memory | publish only | - | - |
 
-## Envelope v1 (summary)
+## Envelope contract (v1)
 
-Every message is encoded as JSON with a base64 payload:
+Every message is encoded as JSON with a base64 payload field.
 
-- Required fields: `v`, `id`, `topic`, `ts`, `content_type`, `payload_b64`, `meta`
+Required fields:
+- `v`
+- `id`
+- `topic`
+- `ts`
+- `content_type`
+- `payload_b64`
+- `meta`
+
+Defaults:
 - `content_type` defaults to `application/octet-stream`
 - `meta` is always present (empty object allowed)
 
-The canonical schema and corpus live under `spec/`.
+Source of truth:
+- JSON Schema: `spec/envelope_v1.jsonschema`
+- Cross-language corpus: `spec/corpus/samples`, `spec/corpus/expected`
 
-## Cross-language example (Go publisher → TypeScript subscriber via AMQP)
+## Install
 
-Go publisher:
+TypeScript (npm):
+
+```bash
+npm install @relaymesh/relaybus-core @relaymesh/relaybus-amqp @relaymesh/relaybus-nats @relaymesh/relaybus-kafka @relaymesh/relaybus-http
+```
+
+Python (PyPI):
+
+```bash
+pip install relaybus-core relaybus-amqp relaybus-nats relaybus-kafka relaybus-http
+```
+
+Go:
+
+```bash
+go get github.com/relaymesh/relaybus/sdk/core/go
+```
+
+## Quick example (Go publisher -> TypeScript subscriber over AMQP)
 
 ```go
 package main
@@ -50,29 +87,26 @@ func main() {
 		Destination: "amqp",
 		AMQP: amqpadapter.Config{
 			URL:                "amqp://guest:guest@localhost:5672/",
-			Exchange:           "",
 			RoutingKeyTemplate: "{topic}",
 		},
 	})
 	if err != nil {
-		log.Fatalf("publisher: %v", err)
+		log.Fatal(err)
 	}
 	defer pub.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := pub.Publish(ctx, "relaybus.demo", core.Message{
-		Topic:    "relaybus.demo",
-		Payload:  []byte("hello from go"),
-		Metadata: map[string]string{"lang": "go"},
-	}); err != nil {
-		log.Fatalf("publish: %v", err)
+	err = pub.Publish(ctx, "relaybus.demo", core.Message{
+		Topic:   "relaybus.demo",
+		Payload: []byte("hello from go"),
+	})
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 ```
-
-TypeScript subscriber:
 
 ```ts
 import { AmqpSubscriber } from "@relaymesh/relaybus-amqp";
@@ -81,7 +115,7 @@ async function main() {
   const sub = await AmqpSubscriber.connect({
     url: "amqp://guest:guest@localhost:5672/",
     onMessage: (msg) => {
-      console.log(`received id=${msg.id} topic=${msg.topic} payload=${msg.payload.toString()}`);
+      console.log(msg.topic, msg.payload.toString());
     }
   });
 
@@ -95,36 +129,72 @@ main().catch((err) => {
 });
 ```
 
-## Packages
+## Package docs
 
-TypeScript (npm):
-- `@relaymesh/relaybus-core`
-- `@relaymesh/relaybus-amqp`
-- `@relaymesh/relaybus-nats`
-- `@relaymesh/relaybus-kafka`
-- `@relaymesh/relaybus-http`
+TypeScript:
+- `sdk/core/typescript/README.md`
+- `sdk/amqp/typescript/README.md`
+- `sdk/nats/typescript/README.md`
+- `sdk/kafka/typescript/README.md`
+- `sdk/http/typescript/README.md`
 
-Python (PyPI):
-- `relaybus-core`
-- `relaybus-amqp`
-- `relaybus-nats`
-- `relaybus-kafka`
-- `relaybus-http`
+Python:
+- `sdk/core/python/README.md`
+- `sdk/amqp/python/README.md`
+- `sdk/nats/python/README.md`
+- `sdk/kafka/python/README.md`
+- `sdk/http/python/README.md`
 
-## Install
+Go:
+- `sdk/core/go`
+- `sdk/amqp/go`
+- `sdk/nats/go`
+- `sdk/kafka/go`
+- `sdk/http/go`
 
-npm (public registry):
+## Development
 
+This repository is a multi-language monorepo.
+
+Top-level layout:
+- `sdk/core/{go,typescript,python}`: shared envelope/core behavior
+- `sdk/{amqp,http,nats,kafka}/{go,typescript,python}`: transport adapters
+- `spec/`: schema + corpus fixtures used by tests
+- `scripts/`: repo tooling (`sync_core.py`, `bump_versions.py`, `e2e.sh`)
+
+Install JS workspace deps:
+
+```bash
+pnpm install
 ```
-npm install @relaymesh/relaybus-core @relaymesh/relaybus-amqp @relaymesh/relaybus-nats @relaymesh/relaybus-kafka @relaymesh/relaybus-http
+
+Run all unit tests:
+
+```bash
+make test
 ```
 
-pip (PyPI):
+Run e2e locally:
 
+```bash
+docker compose -f docker-compose.yaml up -d
+make e2e
+docker compose -f docker-compose.yaml down -v
 ```
-pip install relaybus-core relaybus-amqp relaybus-nats relaybus-kafka relaybus-http
+
+Sync vendored core code into adapters (required after core TS/Python changes):
+
+```bash
+python3 scripts/sync_core.py
 ```
 
-## Testing and e2e
+## CI and releases
 
-Unit tests are language-native (`go test`, `npm test`, `pytest`). End-to-end runs use the local `docker-compose.yaml` harness; see `docs/e2e.md` for details.
+- CI workflow: `.github/workflows/ci.yml`
+- Release workflow: `.github/workflows/release.yml` (tag push `v*`)
+
+Version bump helper:
+
+```bash
+make bump VERSION=0.x.y
+```

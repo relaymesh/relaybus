@@ -198,6 +198,27 @@ export function encodeEnvelope(message: OutgoingMessage, options?: NormalizeOpti
   return Buffer.from(JSON.stringify(envelope), "utf8");
 }
 
+export function resolveTopicOrThrow(argumentTopic: string, messageTopic?: string): string {
+  const topic = messageTopic && messageTopic.length > 0 ? messageTopic : argumentTopic;
+  if (!topic) {
+    throw new Error("topic is required");
+  }
+  if (argumentTopic && messageTopic && argumentTopic !== messageTopic) {
+    throw new Error(`topic mismatch: ${messageTopic} vs ${argumentTopic}`);
+  }
+  return topic;
+}
+
+export function joinPrefixedTopic(prefix: string, topic: string): string {
+  if (!prefix) {
+    return topic;
+  }
+  if (/[._-]$/.test(prefix)) {
+    return `${prefix}${topic}`;
+  }
+  return `${prefix}.${topic}`;
+}
+
 export const defaults = {
   DEFAULT_CONTENT_TYPE
 };

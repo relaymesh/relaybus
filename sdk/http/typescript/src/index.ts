@@ -1,5 +1,12 @@
-import { decodeEnvelope, encodeEnvelope, DecodedMessage, OutgoingMessage } from "./core";
+import {
+  decodeEnvelope,
+  encodeEnvelope,
+  DecodedMessage,
+  OutgoingMessage,
+  resolveTopicOrThrow
+} from "./core";
 import http from "node:http";
+import { timingSafeEqual } from "node:crypto";
 
 export type HttpRequest = {
   url: string;
@@ -10,6 +17,7 @@ export type HttpRequest = {
 
 export type HttpResponse = {
   status: number;
+  body?: string;
 };
 
 export type HttpDoer = (req: HttpRequest) => Promise<HttpResponse> | HttpResponse;
@@ -25,6 +33,7 @@ export type HttpPublisherConnectConfig = {
   endpoint: string;
   headers?: Record<string, string>;
   idempotencyHeader?: string;
+  timeoutMs?: number;
 };
 
 export class HttpPublisher {
@@ -50,23 +59,35 @@ export class HttpPublisher {
     if (!globalThis.fetch) {
       throw new Error("fetch is not available");
     }
+    const endpointUrl = new URL(config.endpoint);
+    if (endpointUrl.protocol !== "http:" && endpointUrl.protocol !== "https:") {
+      throw new Error("endpoint must be a valid http(s) URL with host");
+    }
+    const timeoutMs = config.timeoutMs ?? 10000;
     return new HttpPublisher({
       endpoint: config.endpoint,
       headers: config.headers,
       idempotencyHeader: config.idempotencyHeader,
       doer: async (req) => {
+        const signal = typeof AbortSignal.timeout === "function"
+          ? AbortSignal.timeout(timeoutMs)
+          : undefined;
         const response = await fetch(req.url, {
           method: req.method,
           headers: req.headers,
-          body: new Uint8Array(req.body)
+          body: new Uint8Array(req.body),
+          signal
         });
-        return { status: response.status };
+        return {
+          status: response.status,
+          body: response.status >= 200 && response.status < 300 ? undefined : await response.text()
+        };
       }
     });
   }
 
   async publish(topic: string, message: OutgoingMessage): Promise<void> {
-    const resolved = resolveTopic(topic, message.topic);
+    const resolved = resolveTopicOrThrow(topic, message.topic);
     const payload = encodeEnvelope({ ...message, topic: resolved });
 
     const req: HttpRequest = {
@@ -85,7 +106,10 @@ export class HttpPublisher {
 
     const response = await Promise.resolve(this.doer(req));
     if (response.status < 200 || response.status >= 300) {
-      throw new Error(`http status ${response.status}`);
+      const detail = response.body && response.body.trim().length > 0
+        ? `: ${response.body.trim().slice(0, 200)}`
+        : "";
+      throw new Error(`http status ${response.status}${detail}`);
     }
   }
 }
@@ -97,6 +121,9 @@ export type HttpSubscriberConfig = {
 export type HttpSubscriberListenConfig = {
   port: number;
   host?: string;
+  maxBodyBytes?: number;
+  authHeader?: string;
+  authToken?: string;
 };
 
 export class HttpSubscriber {
@@ -112,9 +139,58 @@ export class HttpSubscriber {
   }
 
   async listen(config: HttpSubscriberListenConfig): Promise<http.Server> {
+    const maxBodyBytes = config.maxBodyBytes ?? 1_048_576;
+    const authHeader = config.authHeader ?? "authorization";
+    const authToken = config.authToken;
     const server = http.createServer((req, res) => {
+      if (req.method !== "POST") {
+        res.statusCode = 405;
+        res.end();
+        return;
+      }
+      if (authToken !== undefined) {
+        const provided = (req.headers[authHeader] as string | undefined)?.trim() ?? "";
+        if (!constantTimeEquals(provided, authToken.trim())) {
+          res.statusCode = 401;
+          res.end();
+          return;
+        }
+      }
+      const contentType = req.headers["content-type"];
+      if (typeof contentType === "string" && !contentType.startsWith("application/json")) {
+        res.statusCode = 415;
+        res.end();
+        return;
+      }
+      const lengthHeader = req.headers["content-length"];
+      if (typeof lengthHeader !== "string") {
+        res.statusCode = 411;
+        res.end();
+        return;
+      }
+      const expected = Number(lengthHeader);
+      if (!Number.isInteger(expected) || expected < 0) {
+        res.statusCode = 400;
+        res.end();
+        return;
+      }
+      if (expected > maxBodyBytes) {
+        res.statusCode = 413;
+        res.end();
+        return;
+      }
       const chunks: Buffer[] = [];
-      req.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+      let total = 0;
+      req.on("data", (chunk) => {
+        const data = Buffer.from(chunk);
+        chunks.push(data);
+        total += chunk.length;
+        if (total > maxBodyBytes) {
+          res.statusCode = 413;
+          res.end();
+          req.destroy();
+        }
+      });
       req.on("end", async () => {
         try {
           await this.handle(Buffer.concat(chunks));
@@ -134,17 +210,6 @@ export class HttpSubscriber {
   }
 }
 
-function resolveTopic(argumentTopic: string, messageTopic?: string): string {
-  const topic = messageTopic && messageTopic.length > 0 ? messageTopic : argumentTopic;
-  if (!topic) {
-    throw new Error("topic is required");
-  }
-  if (argumentTopic && messageTopic && argumentTopic !== messageTopic) {
-    throw new Error(`topic mismatch: ${messageTopic} vs ${argumentTopic}`);
-  }
-  return topic;
-}
-
 function buildEndpoint(endpoint: string, topic: string): string {
   if (endpoint.includes("{topic}")) {
     return endpoint.split("{topic}").join(encodeURIComponent(topic));
@@ -153,4 +218,13 @@ function buildEndpoint(endpoint: string, topic: string): string {
     return endpoint;
   }
   return endpoint.replace(/\/$/, "") + "/" + encodeURIComponent(topic);
+}
+
+function constantTimeEquals(left: string, right: string): boolean {
+  const leftBuf = Buffer.from(left, "utf8");
+  const rightBuf = Buffer.from(right, "utf8");
+  if (leftBuf.length !== rightBuf.length) {
+    return false;
+  }
+  return timingSafeEqual(leftBuf, rightBuf);
 }

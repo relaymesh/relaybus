@@ -4,7 +4,13 @@ from dataclasses import dataclass
 from typing import Callable, Optional, Union
 import time
 
-from relaybus_core import Message, OutgoingMessage, decode_envelope, encode_envelope
+from relaybus_core import (
+    Message,
+    OutgoingMessage,
+    decode_envelope,
+    encode_envelope,
+    resolve_topic_or_raise,
+)
 
 
 @dataclass
@@ -99,11 +105,15 @@ class AmqpSubscriber:
         )
         if self._exchange:
             routing_key = _build_routing_key(self._routing_key_template, topic)
-            self._channel.queue_bind(queue=queue_name, exchange=self._exchange, routing_key=routing_key)
+            self._channel.queue_bind(
+                queue=queue_name, exchange=self._exchange, routing_key=routing_key
+            )
 
         deadline = time.time() + timeout
         while time.time() < deadline:
-            method_frame, _properties, body = self._channel.basic_get(queue=queue_name, auto_ack=False)
+            method_frame, _properties, body = self._channel.basic_get(
+                queue=queue_name, auto_ack=False
+            )
             if method_frame:
                 self.handle_delivery(Delivery(body=body))
                 self._channel.basic_ack(method_frame.delivery_tag)
@@ -158,7 +168,7 @@ class AmqpPublisher:
         return publisher
 
     def publish(self, topic: str, message: OutgoingMessage) -> None:
-        resolved = _resolve_topic(topic, message.topic)
+        resolved = resolve_topic_or_raise(topic, message.topic)
         self._ensure_infrastructure(resolved)
         envelope = encode_envelope(
             OutgoingMessage(
@@ -218,17 +228,12 @@ class AmqpPublisher:
                 routing_key = _build_routing_key(self._routing_key_template, topic)
                 token = f"{queue_name}|{self._exchange}|{routing_key}"
                 if token not in self._ensured_bindings:
-                    bind_queue(queue=queue_name, exchange=self._exchange, routing_key=routing_key)
+                    bind_queue(
+                        queue=queue_name,
+                        exchange=self._exchange,
+                        routing_key=routing_key,
+                    )
                     self._ensured_bindings.add(token)
-
-
-def _resolve_topic(argument_topic: str, message_topic: Optional[str]) -> str:
-    topic = message_topic or argument_topic
-    if not topic:
-        raise ValueError("topic is required")
-    if argument_topic and message_topic and argument_topic != message_topic:
-        raise ValueError(f"topic mismatch: {message_topic} vs {argument_topic}")
-    return topic
 
 
 def _build_routing_key(template: str, topic: str) -> str:
@@ -243,17 +248,27 @@ class _PikaChannelAdapter:
     def __init__(self, channel: object) -> None:
         self._channel = channel
 
-    def publish(self, exchange: str, routing_key: str, body: bytes, properties: Optional[dict] = None) -> None:
+    def publish(
+        self,
+        exchange: str,
+        routing_key: str,
+        body: bytes,
+        properties: Optional[dict] = None,
+    ) -> None:
         pika = _require_pika()
         props = pika.BasicProperties(
             content_type=properties.get("content_type") if properties else None,
             message_id=properties.get("message_id") if properties else None,
             headers=properties.get("headers") if properties else None,
         )
-        self._channel.basic_publish(exchange=exchange, routing_key=routing_key, body=body, properties=props)
+        self._channel.basic_publish(
+            exchange=exchange, routing_key=routing_key, body=body, properties=props
+        )
 
     def queue_declare(self, queue: str, durable: bool, auto_delete: bool) -> None:
-        self._channel.queue_declare(queue=queue, durable=durable, auto_delete=auto_delete)
+        self._channel.queue_declare(
+            queue=queue, durable=durable, auto_delete=auto_delete
+        )
 
     def exchange_declare(
         self, exchange: str, exchange_type: str, durable: bool, auto_delete: bool
@@ -266,7 +281,9 @@ class _PikaChannelAdapter:
         )
 
     def queue_bind(self, queue: str, exchange: str, routing_key: str) -> None:
-        self._channel.queue_bind(queue=queue, exchange=exchange, routing_key=routing_key)
+        self._channel.queue_bind(
+            queue=queue, exchange=exchange, routing_key=routing_key
+        )
 
 
 def _connect_channel(url: str) -> tuple[object, object]:

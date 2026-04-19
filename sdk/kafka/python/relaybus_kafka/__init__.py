@@ -6,7 +6,14 @@ import time
 import sys
 import types
 
-from relaybus_core import Message, OutgoingMessage, decode_envelope, encode_envelope
+from relaybus_core import (
+    Message,
+    OutgoingMessage,
+    decode_envelope,
+    encode_envelope,
+    join_prefixed_topic,
+    resolve_topic_or_raise,
+)
 
 
 @dataclass
@@ -58,7 +65,7 @@ class KafkaPublisher:
         return publisher
 
     def publish(self, topic: str, message: OutgoingMessage) -> None:
-        resolved = _resolve_topic(topic, message.topic)
+        resolved = resolve_topic_or_raise(topic, message.topic)
         envelope = encode_envelope(
             OutgoingMessage(
                 topic=resolved,
@@ -72,7 +79,7 @@ class KafkaPublisher:
         send = getattr(self._producer, "send", None)
         if not callable(send):
             raise ValueError("producer must define send")
-        full_topic = f"{self._prefix}{resolved}"
+        full_topic = join_prefixed_topic(self._prefix, resolved)
         self._ensure_topic(full_topic)
         send(full_topic, message.id.encode() if message.id else None, envelope)
 
@@ -103,7 +110,11 @@ class KafkaPublisher:
         except Exception:
             return
         try:
-            create_topics(new_topics=[NewTopic(name=topic, num_partitions=1, replication_factor=1)])
+            create_topics(
+                new_topics=[
+                    NewTopic(name=topic, num_partitions=1, replication_factor=1)
+                ]
+            )
         except TopicAlreadyExistsError:
             pass
         self._ensured_topics.add(topic)
@@ -119,6 +130,7 @@ class KafkaSubscriberConnectConfig:
     brokers: Sequence[str] | str
     on_message: Callable[[Message], None]
     group_id: str = "relaybus"
+    topic_prefix: str = ""
     max_messages: int = 1
     timeout: float = 30.0
     auto_offset_reset: str = "earliest"
@@ -128,6 +140,7 @@ class KafkaSubscriber:
     def __init__(self, config: KafkaSubscriberConfig) -> None:
         self._on_message = config.on_message
         self._consumer = None
+        self._prefix = ""
         self._max_messages = 1
         self._timeout = 30.0
 
@@ -149,6 +162,7 @@ class KafkaSubscriber:
         )
         subscriber = cls(KafkaSubscriberConfig(on_message=config.on_message))
         subscriber._consumer = consumer
+        subscriber._prefix = config.topic_prefix
         subscriber._max_messages = config.max_messages
         subscriber._timeout = config.timeout
         return subscriber
@@ -160,7 +174,7 @@ class KafkaSubscriber:
     def start(self, topic: str, timeout: Optional[float] = None) -> None:
         if self._consumer is None:
             raise ValueError("consumer is not initialized")
-        self._consumer.subscribe([topic])
+        self._consumer.subscribe([join_prefixed_topic(self._prefix, topic)])
         deadline = time.time() + (timeout or self._timeout)
         count = 0
         while time.time() < deadline:
@@ -183,15 +197,6 @@ class KafkaSubscriber:
             self._consumer.close()
 
 
-def _resolve_topic(argument_topic: str, message_topic: Optional[str]) -> str:
-    topic = message_topic or argument_topic
-    if not topic:
-        raise ValueError("topic is required")
-    if argument_topic and message_topic and argument_topic != message_topic:
-        raise ValueError(f"topic mismatch: {message_topic} vs {argument_topic}")
-    return topic
-
-
 class _KafkaPythonProducerAdapter:
     def __init__(self, producer: object) -> None:
         self._producer = producer
@@ -199,12 +204,12 @@ class _KafkaPythonProducerAdapter:
     def send(self, topic_name: str, key: Optional[bytes], value: bytes) -> None:
         future = self._producer.send(topic_name, key=key, value=value)
         future.get(timeout=10)
-        self._producer.flush()
 
 
 def _ensure_kafka_vendor_six() -> None:
     try:
         import kafka.vendor.six.moves  # type: ignore
+
         return
     except Exception:
         pass

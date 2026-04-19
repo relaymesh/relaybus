@@ -58,4 +58,44 @@ describe("KafkaSubscriber", () => {
     await expect(subscriber.handleMessage("{}"))
       .rejects.toThrow(/invalid v|invalid id/);
   });
+
+  it("subscribes using configured topic prefix", async () => {
+    const subscribedTopics: string[] = [];
+    const fromBeginningValues: boolean[] = [];
+    const subscriber = new KafkaSubscriber({ onMessage: () => {} });
+    const fakeConsumer = {
+      subscribe: async ({ topic, fromBeginning }: { topic: string; fromBeginning: boolean }) => {
+        subscribedTopics.push(topic);
+        fromBeginningValues.push(fromBeginning);
+      },
+      run: async ({ eachMessage }: { eachMessage: (args: { message: { value: Buffer } }) => Promise<void> }) => {
+        await eachMessage({ message: { value: Buffer.from("{}") } });
+      },
+      stop: async () => {},
+      disconnect: async () => {}
+    };
+
+    (subscriber as unknown as { consumer: typeof fakeConsumer; maxMessages: number; prefix: string }).consumer = fakeConsumer;
+    (subscriber as unknown as { consumer: typeof fakeConsumer; maxMessages: number; prefix: string }).maxMessages = 1;
+    (subscriber as unknown as { consumer: typeof fakeConsumer; maxMessages: number; prefix: string }).prefix = "rb-";
+
+    await expect(subscriber.start("alpha")).rejects.toThrow(/invalid v|invalid id/);
+    expect(subscribedTopics).toEqual(["rb-alpha"]);
+    expect(fromBeginningValues).toEqual([false]);
+  });
+
+  it("joins prefix with dot when no delimiter", async () => {
+    const records: any[] = [];
+    const publisher = new KafkaPublisher({
+      producer: {
+        send: async (record) => {
+          records.push(record);
+        }
+      },
+      topicPrefix: "rb"
+    });
+
+    await publisher.publish("alpha", { topic: "alpha", payload: Buffer.from("hi") });
+    expect(records[0].topic).toBe("rb.alpha");
+  });
 });

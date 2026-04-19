@@ -1,4 +1,11 @@
-import { decodeEnvelope, encodeEnvelope, DecodedMessage, OutgoingMessage } from "./core";
+import {
+  decodeEnvelope,
+  encodeEnvelope,
+  DecodedMessage,
+  OutgoingMessage,
+  joinPrefixedTopic,
+  resolveTopicOrThrow
+} from "./core";
 import { Kafka, Consumer, Producer, Admin } from "kafkajs";
 
 export type KafkaProducer = {
@@ -62,10 +69,10 @@ export class KafkaPublisher {
   }
 
   async publish(topic: string, message: OutgoingMessage): Promise<void> {
-    const resolved = resolveTopic(topic, message.topic);
+    const resolved = resolveTopicOrThrow(topic, message.topic);
     const payload = encodeEnvelope({ ...message, topic: resolved });
     const record = {
-      topic: `${this.prefix}${resolved}`,
+      topic: joinPrefixedTopic(this.prefix, resolved),
       key: message.id ? Buffer.from(message.id) : undefined,
       value: payload
     };
@@ -114,12 +121,16 @@ export type KafkaSubscriberConnectConfig = {
   onMessage: (msg: DecodedMessage) => void | Promise<void>;
   groupId?: string;
   clientId?: string;
+  topicPrefix?: string;
+  fromBeginning?: boolean;
   maxMessages?: number;
 };
 
 export class KafkaSubscriber {
   private readonly onMessage: (msg: DecodedMessage) => void | Promise<void>;
   private consumer?: Consumer;
+  private prefix = "";
+  private fromBeginning = false;
   private maxMessages?: number;
 
   constructor(config: KafkaSubscriberConfig) {
@@ -135,6 +146,8 @@ export class KafkaSubscriber {
     await consumer.connect();
     const subscriber = new KafkaSubscriber({ onMessage: config.onMessage });
     subscriber.consumer = consumer;
+    subscriber.prefix = config.topicPrefix ?? "";
+    subscriber.fromBeginning = config.fromBeginning ?? false;
     subscriber.maxMessages = config.maxMessages ?? 1;
     return subscriber;
   }
@@ -148,7 +161,10 @@ export class KafkaSubscriber {
     if (!this.consumer) {
       throw new Error("consumer is not initialized");
     }
-    await this.consumer.subscribe({ topic, fromBeginning: true });
+    await this.consumer.subscribe({
+      topic: joinPrefixedTopic(this.prefix, topic),
+      fromBeginning: this.fromBeginning
+    });
     const consumer = this.consumer;
     const max = this.maxMessages ?? 1;
     let count = 0;
@@ -168,11 +184,6 @@ export class KafkaSubscriber {
       } catch {
         // Ignore stop failures.
       }
-      try {
-        await consumer.disconnect();
-      } catch {
-        // Ignore disconnect failures.
-      }
     };
 
     try {
@@ -188,6 +199,12 @@ export class KafkaSubscriber {
       });
     } catch (err) {
       await finish(err as Error);
+    } finally {
+      try {
+        await consumer.disconnect();
+      } catch {
+        // Ignore disconnect failures.
+      }
     }
     if (finishError) {
       throw finishError;
@@ -203,17 +220,6 @@ export class KafkaSubscriber {
       }
     }
   }
-}
-
-function resolveTopic(argumentTopic: string, messageTopic?: string): string {
-  const topic = messageTopic && messageTopic.length > 0 ? messageTopic : argumentTopic;
-  if (!topic) {
-    throw new Error("topic is required");
-  }
-  if (argumentTopic && messageTopic && argumentTopic !== messageTopic) {
-    throw new Error(`topic mismatch: ${messageTopic} vs ${argumentTopic}`);
-  }
-  return topic;
 }
 
 function isTopicAlreadyExists(err: unknown): boolean {

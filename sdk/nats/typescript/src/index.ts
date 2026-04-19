@@ -1,4 +1,11 @@
-import { decodeEnvelope, encodeEnvelope, DecodedMessage, OutgoingMessage } from "./core";
+import {
+  decodeEnvelope,
+  encodeEnvelope,
+  DecodedMessage,
+  OutgoingMessage,
+  joinPrefixedTopic,
+  resolveTopicOrThrow
+} from "./core";
 import { connect, NatsConnection } from "nats";
 
 export type NatsClient = {
@@ -43,9 +50,9 @@ export class NatsPublisher {
   }
 
   async publish(topic: string, message: OutgoingMessage): Promise<void> {
-    const resolved = resolveTopic(topic, message.topic);
+    const resolved = resolveTopicOrThrow(topic, message.topic);
     const payload = encodeEnvelope({ ...message, topic: resolved });
-    const subject = joinSubject(this.prefix, resolved);
+    const subject = joinPrefixedTopic(this.prefix, resolved);
     await Promise.resolve(this.client.publish(subject, payload));
   }
 
@@ -95,7 +102,7 @@ export class NatsSubscriber {
     if (!this.connection) {
       throw new Error("connection is not initialized");
     }
-    const subject = joinSubject(this.prefix ?? "", topic);
+    const subject = joinPrefixedTopic(this.prefix ?? "", topic);
     const sub = this.connection.subscribe(subject);
     let count = 0;
     for await (const msg of sub) {
@@ -114,25 +121,4 @@ export class NatsSubscriber {
       await this.connection.drain();
     }
   }
-}
-
-function resolveTopic(argumentTopic: string, messageTopic?: string): string {
-  const topic = messageTopic && messageTopic.length > 0 ? messageTopic : argumentTopic;
-  if (!topic) {
-    throw new Error("topic is required");
-  }
-  if (argumentTopic && messageTopic && argumentTopic !== messageTopic) {
-    throw new Error(`topic mismatch: ${messageTopic} vs ${argumentTopic}`);
-  }
-  return topic;
-}
-
-function joinSubject(prefix: string, topic: string): string {
-  if (!prefix) {
-    return topic;
-  }
-  if (prefix.endsWith(".")) {
-    return `${prefix}${topic}`;
-  }
-  return `${prefix}.${topic}`;
 }

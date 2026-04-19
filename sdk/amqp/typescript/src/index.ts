@@ -1,4 +1,10 @@
-import { decodeEnvelope, encodeEnvelope, DecodedMessage, OutgoingMessage } from "./core";
+import {
+  decodeEnvelope,
+  encodeEnvelope,
+  DecodedMessage,
+  OutgoingMessage,
+  resolveTopicOrThrow
+} from "./core";
 import { connect, Channel, ChannelModel, ConsumeMessage, ConfirmChannel } from "amqplib";
 
 export type Delivery = {
@@ -198,7 +204,7 @@ export class AmqpPublisher {
   }
 
   async publish(topic: string, message: OutgoingMessage): Promise<void> {
-    const resolved = resolveTopic(topic, message.topic);
+    const resolved = resolveTopicOrThrow(topic, message.topic);
     await this.ensureInfrastructure(resolved);
     const payload = encodeEnvelope({ ...message, topic: resolved });
     const routingKey = buildRoutingKey(this.routingKeyTemplate, resolved);
@@ -252,17 +258,6 @@ export class AmqpPublisher {
       }
     }
   }
-}
-
-function resolveTopic(argumentTopic: string, messageTopic?: string): string {
-  const topic = messageTopic && messageTopic.length > 0 ? messageTopic : argumentTopic;
-  if (!topic) {
-    throw new Error("topic is required");
-  }
-  if (argumentTopic && messageTopic && argumentTopic !== messageTopic) {
-    throw new Error(`topic mismatch: ${messageTopic} vs ${argumentTopic}`);
-  }
-  return topic;
 }
 
 function buildRoutingKey(template: string, topic: string): string {

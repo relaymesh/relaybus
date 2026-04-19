@@ -4,7 +4,14 @@ from dataclasses import dataclass
 from typing import Callable, Optional
 import asyncio
 
-from relaybus_core import Message, OutgoingMessage, decode_envelope, encode_envelope
+from relaybus_core import (
+    Message,
+    OutgoingMessage,
+    decode_envelope,
+    encode_envelope,
+    join_prefixed_topic,
+    resolve_topic_or_raise,
+)
 
 
 @dataclass
@@ -29,10 +36,12 @@ class NatsPublisher:
     @classmethod
     def connect(cls, config: NatsPublisherConnectConfig) -> "NatsPublisher":
         client = _SyncNatsClient(config.url)
-        return cls(NatsPublisherConfig(client=client, subject_prefix=config.subject_prefix))
+        return cls(
+            NatsPublisherConfig(client=client, subject_prefix=config.subject_prefix)
+        )
 
     def publish(self, topic: str, message: OutgoingMessage) -> None:
-        resolved = _resolve_topic(topic, message.topic)
+        resolved = resolve_topic_or_raise(topic, message.topic)
         envelope = encode_envelope(
             OutgoingMessage(
                 topic=resolved,
@@ -43,7 +52,7 @@ class NatsPublisher:
                 meta=message.meta,
             )
         )
-        subject = _join_subject(self._prefix, resolved)
+        subject = join_prefixed_topic(self._prefix, resolved)
         publish = getattr(self._client, "publish", None)
         if not callable(publish):
             raise ValueError("client must define publish")
@@ -85,26 +94,11 @@ class NatsSubscriber:
     def start(self, topic: str, timeout: Optional[float] = None) -> None:
         if not self._url:
             raise ValueError("url is not configured")
-        subject = _join_subject(self._prefix, topic)
-        data = asyncio.run(_subscribe_once(self._url, subject, timeout or self._timeout))
+        subject = join_prefixed_topic(self._prefix, topic)
+        data = asyncio.run(
+            _subscribe_once(self._url, subject, timeout or self._timeout)
+        )
         self.handle_message(data)
-
-
-def _resolve_topic(argument_topic: str, message_topic: Optional[str]) -> str:
-    topic = message_topic or argument_topic
-    if not topic:
-        raise ValueError("topic is required")
-    if argument_topic and message_topic and argument_topic != message_topic:
-        raise ValueError(f"topic mismatch: {message_topic} vs {argument_topic}")
-    return topic
-
-
-def _join_subject(prefix: str, topic: str) -> str:
-    if not prefix:
-        return topic
-    if prefix.endswith("."):
-        return f"{prefix}{topic}"
-    return f"{prefix}.{topic}"
 
 
 class _SyncNatsClient:

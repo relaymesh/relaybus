@@ -5,7 +5,13 @@ import json
 import pytest
 
 from relaybus_core import OutgoingMessage, decode_envelope
-from relaybus_http import HttpPublisher, HttpPublisherConfig, HttpSubscriber, HttpSubscriberConfig
+from relaybus_http import (
+    HttpPublisher,
+    HttpPublisherConfig,
+    HttpPublisherConnectConfig,
+    HttpSubscriber,
+    HttpSubscriberConfig,
+)
 
 
 def test_http_publisher_posts_envelope():
@@ -40,6 +46,17 @@ def test_http_publisher_rejects_non_2xx():
         publisher.publish("alpha", OutgoingMessage(topic="alpha", payload=b"hi"))
 
 
+def test_http_publisher_includes_error_body():
+    def doer(method, url, headers, body):
+        return 500, b'{"error":"bad gateway"}'
+
+    publisher = HttpPublisher(
+        HttpPublisherConfig(endpoint="https://example.test/{topic}", doer=doer)
+    )
+    with pytest.raises(ValueError, match="bad gateway"):
+        publisher.publish("alpha", OutgoingMessage(topic="alpha", payload=b"hi"))
+
+
 def test_http_subscriber_decodes_body():
     payload = json.dumps(
         {
@@ -68,3 +85,43 @@ def test_http_subscriber_rejects_invalid_json():
     subscriber = HttpSubscriber(HttpSubscriberConfig(on_message=lambda msg: None))
     with pytest.raises(ValueError, match="invalid json"):
         subscriber.handle("{")
+
+
+def test_http_connect_preserves_query_string(monkeypatch):
+    seen = {}
+
+    class FakeResponse:
+        status = 204
+
+        def read(self):
+            return b""
+
+    class FakeHTTPConnection:
+        def __init__(self, host, port, timeout=None):
+            seen["timeout"] = timeout
+
+        def request(self, method, path, body=None, headers=None):
+            seen["path"] = path
+
+        def getresponse(self):
+            return FakeResponse()
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr("relaybus_http.http.client.HTTPConnection", FakeHTTPConnection)
+
+    publisher = HttpPublisher.connect(
+        HttpPublisherConnectConfig(
+            endpoint="http://example.test/{topic}?token=abc", timeout=3.5
+        )
+    )
+    publisher.publish("alpha", OutgoingMessage(topic="alpha", payload=b"hi"))
+
+    assert seen["path"] == "/alpha?token=abc"
+    assert seen["timeout"] == 3.5
+
+
+def test_http_connect_rejects_invalid_endpoint():
+    with pytest.raises(ValueError, match=r"valid http\(s\) URL"):
+        HttpPublisher.connect(HttpPublisherConnectConfig(endpoint="not-a-url"))

@@ -38,6 +38,23 @@ describe("HttpPublisher", () => {
       publisher.publish("alpha", { topic: "alpha", payload: Buffer.from("hi") })
     ).rejects.toThrow(/http status 500/);
   });
+
+  it("includes response body in non-2xx errors", async () => {
+    const publisher = new HttpPublisher({
+      endpoint: "https://example.test/{topic}",
+      doer: async () => ({ status: 500, body: '{"error":"bad gateway"}' })
+    });
+
+    await expect(
+      publisher.publish("alpha", { topic: "alpha", payload: Buffer.from("hi") })
+    ).rejects.toThrow(/bad gateway/);
+  });
+
+  it("rejects non-http endpoint in connect", () => {
+    expect(() => HttpPublisher.connect({ endpoint: "ftp://example.test/topic" })).toThrow(
+      /valid http\(s\) URL/
+    );
+  });
 });
 
 describe("HttpSubscriber", () => {

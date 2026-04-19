@@ -149,3 +149,20 @@ def encode_envelope(
         "meta": meta,
     }
     return json.dumps(env).encode("utf-8")
+
+
+def resolve_topic_or_raise(argument_topic: str, message_topic: Optional[str]) -> str:
+    topic = message_topic or argument_topic
+    if not topic:
+        raise ValueError("topic is required")
+    if argument_topic and message_topic and argument_topic != message_topic:
+        raise ValueError(f"topic mismatch: {message_topic} vs {argument_topic}")
+    return topic
+
+
+def join_prefixed_topic(prefix: str, topic: str) -> str:
+    if not prefix:
+        return topic
+    if prefix.endswith((".", "_", "-")):
+        return f"{prefix}{topic}"
+    return f"{prefix}.{topic}"
